@@ -1,25 +1,25 @@
 classdef SplitFieldCentering < edu.washington.rieke.protocols.RiekeStageProtocol
     
     properties
-        preTime = 250 %(ms)
-        stimTime = 2000 %(ms)
-        tailTime = 250 %(ms)
-        contrast = 0.9 %relative to mean (0-1)
-        cycleFrequency = 4; %(Hz)
-        spotDiameter = 300; %(um)
+        preTime = 250 % ms
+        stimTime = 2000 % ms
+        tailTime = 250 % ms
+        contrast = 0.9 % relative to mean (0-1)
+        cycleFrequency = 4; % Hz
+        spotDiameter = 300; % um
         splitField = false; 
-        rotation = 0; %(deg)
-        backgroundIntensity = 0.5 %(0-1)
-        centerOffset = [0, 0] %([x,y] um)
-        onlineAnalysis = {'none','extracellular','exc','inh'}
-        numberOfAverages = uint16(1) %number of epochs to queue
+        rotation = 0;  deg
+        backgroundIntensity = 0.5 % (0-1)
+        centerOffset = [0, 0] % [x,y] (um)
+        onlineAnalysis = 'none'
+        numberOfAverages = uint16(1) % number of epochs to queue
         amp % Output amplifier
     end
     
     properties (Hidden)
         ampType
-        runningPSTH
-        runningTrace
+        onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
+        analysisFigure
     end
 
     methods
@@ -44,77 +44,63 @@ classdef SplitFieldCentering < edu.washington.rieke.protocols.RiekeStageProtocol
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('symphonyui.builtin.figures.MeanResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('io.github.stage_vss.figures.FrameTimingFigure', obj.rig.getDevice('Stage'));
-            
             if ~strcmp(obj.onlineAnalysis,'none')
                 % custom figure handler
-                obj.openFigure('Custom', 'UpdateCallback', @F1F2_PSTH);
+                if isempty(obj.analysisFigure) || ~isvalid(obj.analysisFigure)
+                    obj.analysisFigure = obj.showFigure('symphonyui.builtin.figures.CustomFigure', @obj.F1F2_PSTH);
+                    f = obj.analysisFigure.getFigureHandle();
+                    set(f, 'Name', 'Cycle avg PSTH');
+                    obj.analysisFigure.userData.runningTrace = 0;
+                    obj.analysisFigure.userData.axesHandle = axes('Parent', f);
+                end
             end
-            
-            
-            obj.stage.setCanvasClearColor(obj.backgroundIntensity);
         end
         
-        function F1F2_PSTH(obj,epoch,axesHandle) %online analysis function
-            cla(axesHandle)
-            set(axesHandle, 'XTick', [], 'YTick', []);
-            set(axesHandle,'FontSize',14)
-            [response, sampleRate] = epoch.response(obj.amp);
+        function F1F2_PSTH(obj, ~, epoch) %online analysis function
+            response = epoch.getResponse(obj.rig.getDevice(obj.amp));
+            quantities = response.getData();
+            sampleRate = response.sampleRate.quantityInBaseUnits;
             
-
+            axesHandle = obj.analysisFigure.userData.axesHandle;
+            runningTrace = obj.analysisFigure.userData.runningTrace;
+            
             if strcmp(obj.onlineAnalysis,'extracellular') %spike recording
-                binSize = 100; %dataPts
-                noCycles = floor(obj.cycleFrequency*obj.stimTime/1000);
-                period = (1/obj.cycleFrequency)*sampleRate; %data points
-                
-                response(1:(sampleRate*obj.preTime/1000)) = []; %cut out prePts
-                cycleAvgBinCts = 0;
-                for c = 1:noCycles
-                    cyclePSTH = getPSTHOnline(response((c-1)*period+1:c*period),binSize,0);
-                    cycleAvgBinCts = cycleAvgBinCts + cyclePSTH.spikeCounts;
-                end
-                cycleAvgBinCts = cycleAvgBinCts./noCycles;
-                trialPSTH.spikeCounts = cycleAvgBinCts;
-                trialPSTH.binCenters = cyclePSTH.binCenters;
-                
-                if (obj.numEpochsCompleted == 1)
-                    obj.runningPSTH = trialPSTH;
-                else %add spike counts...
-                    obj.runningPSTH.spikeCounts = obj.runningPSTH.spikeCounts + trialPSTH.spikeCounts;
-                end
-                h = bar(obj.runningPSTH.binCenters./sampleRate,(obj.runningPSTH.spikeCounts./obj.numEpochsCompleted)/(binSize/sampleRate),...
-                    'hist');
-                set(h,'FaceColor',[0 0 0],'EdgeColor',[1 1 1]);
-                xlabel('Time (s)')
-                ylabel('Spike rate (Hz)')
-                title('Running cycle average...')
-                
+                filterSigma = (5/1000)*sampleRate; %msec -> dataPts
+                newFilt = normpdf(1:10*filterSigma,10*filterSigma/2,filterSigma);
+                res = spikeDetectorOnline(quantities,[],sampleRate);
+                epochResponseTrace = zeros(size(quantities));
+                epochResponseTrace(res.sp) = 1; %spike binary
+                epochResponseTrace = sampleRate*conv(epochResponseTrace,newFilt,'same'); %inst firing rate
             else %intracellular - Vclamp
-                response = response-mean(response(1:sampleRate*obj.preTime/1000)); %baseline
+                epochResponseTrace = quantities-mean(quantities(1:sampleRate*obj.preTime/1000)); %baseline
                 if strcmp(obj.onlineAnalysis,'exc') %measuring exc
-                    response = response./(-60-0); %conductance (nS), ballpark
+                    epochResponseTrace = epochResponseTrace./(-60-0); %conductance (nS), ballpark
                 elseif strcmp(obj.onlineAnalysis,'inh') %measuring inh
-                    response = response./(0-(-60)); %conductance (nS), ballpark
+                    epochResponseTrace = epochResponseTrace./(0-(-60)); %conductance (nS), ballpark
                 end
-                noCycles = floor(obj.cycleFrequency*obj.stimTime/1000);
-                period = (1/obj.cycleFrequency)*sampleRate; %data points
-                response(1:(sampleRate*obj.preTime/1000)) = []; %cut out prePts
-                cycleAvgResp = 0;
-                for c = 1:noCycles
-                    cycleAvgResp = cycleAvgResp + response((c-1)*period+1:c*period);
-                end
-                cycleAvgResp = cycleAvgResp./noCycles;
-                timeVector = (1:length(cycleAvgResp))./sampleRate; %sec
-                if (obj.numEpochsCompleted == 1)
-                    obj.runningTrace = cycleAvgResp;
-                else %add resp...
-                    obj.runningTrace = obj.runningTrace + cycleAvgResp;
-                end
-                
-                plot(timeVector,obj.runningTrace./obj.numEpochsCompleted,'k','LineWidth',2)
-                xlabel('Time (s)')
-                ylabel('Resp (nS)')
-                title('Running cycle average...')
             end
+            
+            noCycles = floor(obj.cycleFrequency*obj.stimTime/1000);
+            period = (1/obj.cycleFrequency)*sampleRate; %data points
+            epochResponseTrace(1:(sampleRate*obj.preTime/1000)) = []; %cut out prePts
+            cycleAvgResp = 0;
+            for c = 1:noCycles
+                cycleAvgResp = cycleAvgResp + epochResponseTrace((c-1)*period+1:c*period);
+            end
+            cycleAvgResp = cycleAvgResp./noCycles;
+            timeVector = (1:length(cycleAvgResp))./sampleRate; %sec
+            runningTrace = runningTrace + cycleAvgResp;
+            cla(axesHandle);
+            h = line(timeVector, runningTrace./obj.numEpochsCompleted, 'Parent', axesHandle);
+            set(h,'Color',[0 0 0],'LineWidth',2);
+            xlabel(axesHandle,'Time (s)')
+            title(axesHandle,'Running cycle average...')
+            if strcmp(obj.onlineAnalysis,'extracellular')
+                ylabel(axesHandle,'Spike rate (Hz)')
+            else
+                ylabel(axesHandle,'Resp (nS)')
+            end
+            obj.analysisFigure.userData.runningTrace = runningTrace;
         end
         
         function p = createPresentation(obj)
@@ -157,9 +143,14 @@ classdef SplitFieldCentering < edu.washington.rieke.protocols.RiekeStageProtocol
             aperture.position = canvasSize/2 + centerOffsetPix;
             aperture.color = obj.backgroundIntensity;
             aperture.size = [2*max(canvasSize), 2*max(canvasSize)];
-            mask = Mask.createCircularAperture(spotDiameterPix/(2*max(canvasSize)), 1024); %circular aperture
+            mask = stage.core.Mask.createCircularAperture(spotDiameterPix/(2*max(canvasSize)), 1024); %circular aperture
             aperture.setMask(mask);
             p.addStimulus(aperture); %add aperture
+            
+            %hide during pre & post
+            grateVisible = stage.builtin.controllers.PropertyController(grate, 'visible', ...
+                @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
+            p.addController(grateVisible);
 
         end
         
@@ -172,12 +163,6 @@ classdef SplitFieldCentering < edu.washington.rieke.protocols.RiekeStageProtocol
             epoch.addResponse(device);
         end
         
-        function prepareInterval(obj, interval)
-            prepareInterval@edu.washington.rieke.protocols.RiekeStageProtocol(obj, interval);
-            
-            device = obj.rig.getDevice(obj.amp);
-            interval.addDirectCurrentStimulus(device, device.background, obj.interpulseInterval, obj.sampleRate);
-        end
         
         function tf = shouldContinuePreparingEpochs(obj)
             tf = obj.numEpochsPrepared < obj.numberOfAverages;
