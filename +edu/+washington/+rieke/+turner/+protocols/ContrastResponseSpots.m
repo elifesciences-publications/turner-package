@@ -17,10 +17,14 @@ classdef ContrastResponseSpots < edu.washington.rieke.protocols.RiekeStageProtoc
     properties (Hidden)
         ampType
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
-        analysisFigure
+        
         
         spotContrastSequence
         currentSpotContrast
+    end
+    
+    properties (Hidden, Transient)
+        analysisFigure
     end
     
     methods

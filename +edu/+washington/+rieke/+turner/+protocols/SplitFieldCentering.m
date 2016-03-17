@@ -19,6 +19,9 @@ classdef SplitFieldCentering < edu.washington.rieke.protocols.RiekeStageProtocol
     properties (Hidden)
         ampType
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
+    end
+       
+    properties (Hidden, Transient)
         analysisFigure
     end
 
