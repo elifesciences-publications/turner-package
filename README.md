@@ -1,2 +1,5 @@
 # Turner-protocols
-Protocols for Symphony 2.0
+Max's protocols and utilities for Symphony 2.0
+Mostly Stage protocols
+Rieke Lab
+
