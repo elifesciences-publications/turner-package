@@ -5,10 +5,11 @@ classdef SplitFieldCentering < edu.washington.rieke.protocols.RiekeStageProtocol
         stimTime = 2000 % ms
         tailTime = 250 % ms
         contrast = 0.9 % relative to mean (0-1)
-        cycleFrequency = 4; % Hz
+        temporalFrequency = 4 % Hz
         spotDiameter = 300; % um
-        splitField = false; 
-        rotation = 0;  deg
+        maskDiameter = 0 % um
+        splitField = false 
+        rotation = 0;  % deg
         backgroundIntensity = 0.5 % (0-1)
         centerOffset = [0, 0] % [x,y] (um)
         onlineAnalysis = 'none'
@@ -45,7 +46,8 @@ classdef SplitFieldCentering < edu.washington.rieke.protocols.RiekeStageProtocol
             prepareRun@edu.washington.rieke.protocols.RiekeStageProtocol(obj);
             
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
-            obj.showFigure('symphonyui.builtin.figures.MeanResponseFigure', obj.rig.getDevice(obj.amp));
+            obj.showFigure('edu.washington.rieke.turner.figures.MeanResponseFigure',...
+                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis);
             obj.showFigure('io.github.stage_vss.figures.FrameTimingFigure', obj.rig.getDevice('Stage'));
             if ~strcmp(obj.onlineAnalysis,'none')
                 % custom figure handler
@@ -55,6 +57,8 @@ classdef SplitFieldCentering < edu.washington.rieke.protocols.RiekeStageProtocol
                     set(f, 'Name', 'Cycle avg PSTH');
                     obj.analysisFigure.userData.runningTrace = 0;
                     obj.analysisFigure.userData.axesHandle = axes('Parent', f);
+                else
+                    obj.analysisFigure.userData.runningTrace = 0;
                 end
             end
         end
@@ -83,8 +87,8 @@ classdef SplitFieldCentering < edu.washington.rieke.protocols.RiekeStageProtocol
                 end
             end
             
-            noCycles = floor(obj.cycleFrequency*obj.stimTime/1000);
-            period = (1/obj.cycleFrequency)*sampleRate; %data points
+            noCycles = floor(obj.temporalFrequency*obj.stimTime/1000);
+            period = (1/obj.temporalFrequency)*sampleRate; %data points
             epochResponseTrace(1:(sampleRate*obj.preTime/1000)) = []; %cut out prePts
             cycleAvgResp = 0;
             for c = 1:noCycles
@@ -112,6 +116,7 @@ classdef SplitFieldCentering < edu.washington.rieke.protocols.RiekeStageProtocol
             %convert from microns to pixels...
             spotDiameterPix = obj.um2pix(obj.spotDiameter);
             centerOffsetPix = obj.um2pix(obj.centerOffset);
+            maskDiameterPix = obj.um2pix(obj.maskDiameter);
             
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
@@ -132,13 +137,13 @@ classdef SplitFieldCentering < edu.washington.rieke.protocols.RiekeStageProtocol
             p.addStimulus(grate); %add grating to the presentation
             
             %make it contrast-reversing
-            if (obj.cycleFrequency>0) 
+            if (obj.temporalFrequency > 0) 
                 grateContrast = stage.builtin.controllers.PropertyController(grate, 'contrast',...
                     @(state)getGrateContrast(obj, state.time - obj.preTime/1e3));
                 p.addController(grateContrast); %add the controller
             end
             function c = getGrateContrast(obj, time)
-                c = obj.contrast.*sin(2 * pi * obj.cycleFrequency * time);
+                c = obj.contrast.*sin(2 * pi * obj.temporalFrequency * time);
             end
             
             % Create aperture
@@ -149,6 +154,15 @@ classdef SplitFieldCentering < edu.washington.rieke.protocols.RiekeStageProtocol
             mask = stage.core.Mask.createCircularAperture(spotDiameterPix/(2*max(canvasSize)), 1024); %circular aperture
             aperture.setMask(mask);
             p.addStimulus(aperture); %add aperture
+            
+            if (obj.maskDiameter > 0) % Create mask
+                mask = stage.builtin.stimuli.Ellipse();
+                mask.position = canvasSize/2 + centerOffsetPix;
+                mask.color = obj.backgroundIntensity;
+                mask.radiusX = maskDiameterPix/2;
+                mask.radiusY = maskDiameterPix/2;
+                p.addStimulus(mask); %add mask
+            end
             
             %hide during pre & post
             grateVisible = stage.builtin.controllers.PropertyController(grate, 'visible', ...

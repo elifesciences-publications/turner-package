@@ -33,20 +33,12 @@ classdef ExpandingSpots < edu.washington.rieke.protocols.RiekeStageProtocol
             [obj.amp, obj.ampType] = obj.createDeviceNamesProperty('Amp');
         end
         
-        function p = getPreview(obj, panel)
-            if isempty(obj.rig.getDevices('Stage'))
-                p = [];
-                return;
-            end
-            p = io.github.stage_vss.previews.StagePreview(panel, @()obj.createPresentation(), ...
-                'windowSize', obj.rig.getDevice('Stage').getCanvasSize());
-        end
-
         function prepareRun(obj)
             prepareRun@edu.washington.rieke.protocols.RiekeStageProtocol(obj);
             
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
-            obj.showFigure('symphonyui.builtin.figures.MeanResponseFigure', obj.rig.getDevice(obj.amp));
+            obj.showFigure('edu.washington.rieke.turner.figures.MeanResponseFigure',...
+                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,'groupBy',{'currentSpotSize'});
             obj.showFigure('io.github.stage_vss.figures.FrameTimingFigure', obj.rig.getDevice('Stage'));
             if ~strcmp(obj.onlineAnalysis,'none')
                 % custom figure handler
@@ -57,6 +49,9 @@ classdef ExpandingSpots < edu.washington.rieke.protocols.RiekeStageProtocol
                     obj.analysisFigure.userData.countBySize = zeros(size(obj.spotSizes));
                     obj.analysisFigure.userData.responseBySize = zeros(size(obj.spotSizes));
                     obj.analysisFigure.userData.axesHandle = axes('Parent', f);
+                else
+                    obj.analysisFigure.userData.countBySize = zeros(size(obj.spotSizes));
+                    obj.analysisFigure.userData.responseBySize = zeros(size(obj.spotSizes));
                 end
                 
             end

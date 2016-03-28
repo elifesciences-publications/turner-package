@@ -6,6 +6,7 @@ classdef ContrastResponseSpots < edu.washington.rieke.protocols.RiekeStageProtoc
         tailTime = 250
         spotContrast = [-0.9 -0.75 -0.5 -0.25 -0.125 0.125 0.25 0.5 0.75 0.9] % relative to mean
         spotDiameter = 300 % um
+        maskDiameter = 0 % um
         randomizeOrder = false
         backgroundIntensity = 0.5 % (0-1)
         centerOffset = [0, 0] % [x,y] (um)
@@ -33,21 +34,13 @@ classdef ContrastResponseSpots < edu.washington.rieke.protocols.RiekeStageProtoc
             didSetRig@edu.washington.rieke.protocols.RiekeStageProtocol(obj);
             [obj.amp, obj.ampType] = obj.createDeviceNamesProperty('Amp');
         end
-        
-        function p = getPreview(obj, panel)
-            if isempty(obj.rig.getDevices('Stage'))
-                p = [];
-                return;
-            end
-            p = io.github.stage_vss.previews.StagePreview(panel, @()obj.createPresentation(), ...
-                'windowSize', obj.rig.getDevice('Stage').getCanvasSize());
-        end
-        
+         
         function prepareRun(obj)
             prepareRun@edu.washington.rieke.protocols.RiekeStageProtocol(obj);
             
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
-            obj.showFigure('symphonyui.builtin.figures.MeanResponseFigure', obj.rig.getDevice(obj.amp));
+            obj.showFigure('edu.washington.rieke.turner.figures.MeanResponseFigure',...
+                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,'groupBy',{'currentSpotContrast'});
             obj.showFigure('io.github.stage_vss.figures.FrameTimingFigure', obj.rig.getDevice('Stage'));
             if ~strcmp(obj.onlineAnalysis,'none')
                 % custom figure handler
@@ -58,6 +51,9 @@ classdef ContrastResponseSpots < edu.washington.rieke.protocols.RiekeStageProtoc
                     obj.analysisFigure.userData.countByContrast = zeros(size(obj.spotContrast));
                     obj.analysisFigure.userData.responseByContrast = zeros(size(obj.spotContrast));
                     obj.analysisFigure.userData.axesHandle = axes('Parent', f);
+                else
+                    obj.analysisFigure.userData.countByContrast = zeros(size(obj.spotContrast));
+                    obj.analysisFigure.userData.responseByContrast = zeros(size(obj.spotContrast));
                 end
                 
             end
@@ -116,6 +112,7 @@ classdef ContrastResponseSpots < edu.washington.rieke.protocols.RiekeStageProtoc
             %convert from microns to pixels...
             spotDiameterPix = obj.um2pix(obj.spotDiameter);
             centerOffsetPix = obj.um2pix(obj.centerOffset);
+            maskDiameterPix = obj.um2pix(obj.maskDiameter);
             
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
@@ -127,6 +124,15 @@ classdef ContrastResponseSpots < edu.washington.rieke.protocols.RiekeStageProtoc
             spot.radiusY = spotDiameterPix/2;
             spot.position = canvasSize/2 + centerOffsetPix;
             p.addStimulus(spot);
+            
+            if (obj.maskDiameter > 0) % Create mask
+                mask = stage.builtin.stimuli.Ellipse();
+                mask.position = canvasSize/2 + centerOffsetPix;
+                mask.color = obj.backgroundIntensity;
+                mask.radiusX = maskDiameterPix/2;
+                mask.radiusY = maskDiameterPix/2;
+                p.addStimulus(mask); %add mask
+            end
             
             % hide during pre & post
             spotVisible = stage.builtin.controllers.PropertyController(spot, 'visible', ...
