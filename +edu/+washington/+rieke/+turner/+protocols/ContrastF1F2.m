@@ -44,7 +44,8 @@ classdef ContrastF1F2 < edu.washington.rieke.protocols.RiekeStageProtocol
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.rieke.turner.figures.MeanResponseFigure',...
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis);
-            obj.showFigure('io.github.stage_vss.figures.FrameTimingFigure', obj.rig.getDevice('Stage'));
+            obj.showFigure('edu.washington.rieke.turner.figures.FrameTimingFigure',...
+                obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
             
             % Create contrast and phase sequences         
             if strcmp(obj.gratingPhase,'Alternate')
@@ -96,8 +97,8 @@ classdef ContrastF1F2 < edu.washington.rieke.protocols.RiekeStageProtocol
                 aperture = stage.builtin.stimuli.Rectangle();
                 aperture.position = canvasSize/2 + centerOffsetPix;
                 aperture.color = obj.backgroundIntensity;
-                aperture.size = [2*max(canvasSize), 2*max(canvasSize)];
-                mask = stage.core.Mask.createCircularAperture(apertureDiameterPix/(2*max(canvasSize)), 1024); %circular aperture
+                aperture.size = [max(canvasSize), max(canvasSize)];
+                mask = stage.core.Mask.createCircularAperture(apertureDiameterPix/(max(canvasSize)), 1024); %circular aperture
                 aperture.setMask(mask);
                 p.addStimulus(aperture); %add aperture
             end

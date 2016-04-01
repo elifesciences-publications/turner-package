@@ -41,7 +41,8 @@ classdef ContrastResponseSpots < edu.washington.rieke.protocols.RiekeStageProtoc
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.rieke.turner.figures.MeanResponseFigure',...
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,'groupBy',{'currentSpotContrast'});
-            obj.showFigure('io.github.stage_vss.figures.FrameTimingFigure', obj.rig.getDevice('Stage'));
+            obj.showFigure('edu.washington.rieke.turner.figures.FrameTimingFigure',...
+                obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
             if ~strcmp(obj.onlineAnalysis,'none')
                 % custom figure handler
                 if isempty(obj.analysisFigure) || ~isvalid(obj.analysisFigure)

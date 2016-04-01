@@ -41,7 +41,8 @@ classdef SingleSpot < edu.washington.rieke.protocols.RiekeStageProtocol
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.rieke.turner.figures.MeanResponseFigure',...
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis);
-            obj.showFigure('io.github.stage_vss.figures.FrameTimingFigure', obj.rig.getDevice('Stage'));
+            obj.showFigure('edu.washington.rieke.turner.figures.FrameTimingFigure',...
+                obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
         end
         
         function p = createPresentation(obj)
