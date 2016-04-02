@@ -66,7 +66,7 @@ classdef MeanResponseFigure < symphonyui.core.FigureHandler
                 y = quantities;
                 
                 if strcmp(obj.recordingType,'extracellular')
-                    filterSigma = (5/1000)*sampleRate; %5 msec -> dataPts
+                    filterSigma = (15/1000)*sampleRate; %15 msec -> dataPts
                     newFilt = normpdf(1:10*filterSigma,10*filterSigma/2,filterSigma);
                     res = spikeDetectorOnline(y,[],sampleRate);
                     y = zeros(size(y));

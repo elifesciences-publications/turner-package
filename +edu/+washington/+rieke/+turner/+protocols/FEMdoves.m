@@ -18,7 +18,7 @@ classdef FEMdoves < edu.washington.rieke.protocols.RiekeStageProtocol
     properties (Hidden)
         ampType
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
-        
+        centerOffsetType = symphonyui.core.PropertyType('denserealdouble', 'matrix')
         backgroundIntensity
         imageMatrix
         xTraj

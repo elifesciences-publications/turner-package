@@ -21,7 +21,6 @@ classdef ContrastReversingGrating < edu.washington.rieke.protocols.RiekeStagePro
     properties (Hidden)
         ampType
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
-        
         barWidthSequence
         currentBarWidth
     end

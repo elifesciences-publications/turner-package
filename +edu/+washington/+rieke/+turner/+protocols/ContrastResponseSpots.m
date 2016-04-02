@@ -72,10 +72,13 @@ classdef ContrastResponseSpots < edu.washington.rieke.protocols.RiekeStageProtoc
             responseByContrast = obj.analysisFigure.userData.responseByContrast;
             
             if strcmp(obj.onlineAnalysis,'extracellular') %spike recording
-                %take (prePts+1:prePts+stimPts)
-                epochResponseTrace = epochResponseTrace((sampleRate*obj.preTime/1000)+1:(sampleRate*(obj.preTime + obj.stimTime)/1000));
                 %count spikes
                 S = spikeDetectorOnline(epochResponseTrace);
+                prePts = sampleRate*obj.preTime/1e3;
+                stimPts = sampleRate*obj.stimTime/1e3;
+                S.sp(S.sp < prePts) = [];
+                S.sp(S.sp > stimPts + prePts) = [];
+                
                 newEpochResponse = length(S.sp); %spike count
             else %intracellular - Vclamp
                 epochResponseTrace = epochResponseTrace-mean(epochResponseTrace(1:sampleRate*obj.preTime/1000)); %baseline

@@ -20,6 +20,7 @@ classdef SplitFieldCentering < edu.washington.rieke.protocols.RiekeStageProtocol
     properties (Hidden)
         ampType
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
+        centerOffsetType = symphonyui.core.PropertyType('denserealdouble', 'matrix')
     end
        
     properties (Hidden, Transient)
@@ -73,7 +74,7 @@ classdef SplitFieldCentering < edu.washington.rieke.protocols.RiekeStageProtocol
             runningTrace = obj.analysisFigure.userData.runningTrace;
             
             if strcmp(obj.onlineAnalysis,'extracellular') %spike recording
-                filterSigma = (5/1000)*sampleRate; %msec -> dataPts
+                filterSigma = (20/1000)*sampleRate; %msec -> dataPts
                 newFilt = normpdf(1:10*filterSigma,10*filterSigma/2,filterSigma);
                 res = spikeDetectorOnline(quantities,[],sampleRate);
                 epochResponseTrace = zeros(size(quantities));
