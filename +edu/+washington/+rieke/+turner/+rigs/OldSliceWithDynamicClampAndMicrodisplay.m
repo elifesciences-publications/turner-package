@@ -27,7 +27,7 @@ classdef OldSliceWithDynamicClampAndMicrodisplay < symphonyui.core.descriptions.
             ramps('medium')  = obj.MICRODISPLAY_MEDIUM_GAMMA_RAMP * 65535;
             ramps('high')    = obj.MICRODISPLAY_HIGH_GAMMA_RAMP * 65535;
             ramps('maximum') = linspace(0, 65535, 256);
-            microdisplay = edu.washington.rieke.devices.MicrodisplayDevice(ramps);
+            microdisplay = edu.washington.rieke.devices.MicrodisplayDevice(ramps, 'COM3');
             microdisplay.addConfigurationSetting('micronsPerPixel', 1.2, 'isReadOnly', true);
             obj.addDevice(microdisplay);
             frameMonitor = UnitConvertingDevice('Frame Monitor', 'V').bindStream(obj.daqController.getStream('ANALOG_IN.7'));

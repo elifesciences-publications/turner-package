@@ -1,4 +1,4 @@
-classdef NatImageDynamicClamp < edu.washington.rieke.protocols.RiekeProtocol
+classdef NatImageDynamicClamp < edu.washington.riekelab.protocols.RiekeLabProtocol
     
     properties
         gExcMultiplier = 1
@@ -40,7 +40,7 @@ classdef NatImageDynamicClamp < edu.washington.rieke.protocols.RiekeProtocol
     methods
         
         function didSetRig(obj)
-            didSetRig@edu.washington.rieke.protocols.RiekeProtocol(obj);
+            didSetRig@edu.washington.riekelab.protocols.RiekeLabProtocol(obj);
             [obj.amp, obj.ampType] = obj.createDeviceNamesProperty('Amp');
         end
         
@@ -54,7 +54,7 @@ classdef NatImageDynamicClamp < edu.washington.rieke.protocols.RiekeProtocol
 %         end
         
         function prepareRun(obj)
-            prepareRun@edu.washington.rieke.protocols.RiekeProtocol(obj);
+            prepareRun@edu.washington.riekelab.protocols.RiekeLabProtocol(obj);
             
             resourcesDir = 'C:\Users\Max Turner\Documents\GitHub\Turner-protocols\resources\gClampStims\NIFgClampTraces\';
             fileID = [obj.ConductanceSet,'.mat'];
@@ -122,7 +122,7 @@ classdef NatImageDynamicClamp < edu.washington.rieke.protocols.RiekeProtocol
         end
         
         function prepareEpoch(obj, epoch)
-            prepareEpoch@edu.washington.rieke.protocols.RiekeProtocol(obj, epoch);
+            prepareEpoch@edu.washington.riekelab.protocols.RiekeLabProtocol(obj, epoch);
             
             %get image from sequence
             tempIndex = floor(obj.numEpochsCompleted / length(obj.stimSequence.exc));
@@ -152,7 +152,7 @@ classdef NatImageDynamicClamp < edu.washington.rieke.protocols.RiekeProtocol
         end
         
         function prepareInterval(obj, interval)
-            prepareInterval@edu.washington.rieke.protocols.RiekeProtocol(obj, interval);
+            prepareInterval@edu.washington.riekelab.protocols.RiekeLabProtocol(obj, interval);
             
             device = obj.rig.getDevice(obj.amp);
             interval.addDirectCurrentStimulus(device, device.background, obj.interpulseInterval, obj.sampleRate);

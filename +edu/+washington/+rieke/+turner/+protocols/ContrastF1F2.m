@@ -1,4 +1,4 @@
-classdef ContrastF1F2 < edu.washington.rieke.protocols.RiekeStageProtocol
+classdef ContrastF1F2 < edu.washington.riekelab.protocols.RiekeLabStageProtocol
 
     properties
         preTime = 250 % ms
@@ -34,12 +34,12 @@ classdef ContrastF1F2 < edu.washington.rieke.protocols.RiekeStageProtocol
 
     methods
         function didSetRig(obj)
-            didSetRig@edu.washington.rieke.protocols.RiekeStageProtocol(obj);
+            didSetRig@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
             [obj.amp, obj.ampType] = obj.createDeviceNamesProperty('Amp');
         end
         
         function prepareRun(obj)
-            prepareRun@edu.washington.rieke.protocols.RiekeStageProtocol(obj);
+            prepareRun@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
             
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.rieke.turner.figures.MeanResponseFigure',...
@@ -120,7 +120,7 @@ classdef ContrastF1F2 < edu.washington.rieke.protocols.RiekeStageProtocol
         end
         
         function prepareEpoch(obj, epoch)
-            prepareEpoch@edu.washington.rieke.protocols.RiekeStageProtocol(obj, epoch);
+            prepareEpoch@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj, epoch);
             
             device = obj.rig.getDevice(obj.amp);
             duration = (obj.preTime + obj.stimTime + obj.tailTime) / 1e3;
