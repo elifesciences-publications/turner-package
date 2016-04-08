@@ -13,7 +13,7 @@ classdef NatImageDynamicClamp < edu.washington.riekelab.protocols.RiekeLabProtoc
         
         amp                             % Input amplifier
         numberOfAverages = uint16(5)    % Number of epochs
-        interpulseInterval = 0          % Duration between pulses (s)
+        interpulseInterval = 0.2          % Duration between pulses (s)
     end
     
     properties (Hidden)
@@ -30,7 +30,6 @@ classdef NatImageDynamicClamp < edu.washington.riekelab.protocols.RiekeLabProtoc
         
         currentConductanceStim %struct with fields .exc and .inh (vals str: image, disc, or tonic)
         currentConductanceTrial %struct with fields .exc and .inh (vals int)
-        currentConductanceTrace %struct with fields .exc and .inh; before mapped for arduino (still in nS)
     end
     
     properties (Hidden, Transient)
@@ -76,13 +75,13 @@ classdef NatImageDynamicClamp < edu.washington.riekelab.protocols.RiekeLabProtoc
             end
 
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
-            obj.showFigure('symphonyui.builtin.figures.MeanResponseFigure', obj.rig.getDevice(obj.amp));
-            obj.showFigure('symphonyui.builtin.figures.ResponseStatisticsFigure', obj.rig.getDevice(obj.amp), {@mean, @var}, ...
-                'baselineRegion', [0 obj.preTime], ...
-                'measurementRegion', [obj.preTime obj.preTime+obj.stimTime]);
+            obj.showFigure('edu.washington.rieke.turner.figures.MeanResponseFigure',...
+                obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.rieke.turner.figures.DynamicClampFigure',...
-                obj.rig.getDevice(obj.amp), obj.currentConductanceTrace, obj.rig.getDevice('Injected current'),...
+                obj.rig.getDevice(obj.amp), obj.rig.getDevice('Excitatory conductance'),...
+                obj.rig.getDevice('Inhibitory conductance'), obj.rig.getDevice('Injected current'),...
                 obj.ExcReversal, obj.InhReversal);
+
         end
         
         function stim = createConductanceStimulus(obj,conductance)
@@ -107,7 +106,11 @@ classdef NatImageDynamicClamp < edu.washington.riekelab.protocols.RiekeLabProtoc
                 temp = res.(conductance).image{obj.currentImageIndex}(obj.currentConductanceTrial.(conductance),:);
                 newConductanceTrace = mean(temp(1:res.stimStart)) .* ones(size(temp));
             end
-            obj.currentConductanceTrace.(conductance) = newConductanceTrace; %nS, for display
+            if strcmp(conductance,'exc')
+                newConductanceTrace = obj.gExcMultiplier .* newConductanceTrace; %nS
+            elseif strcmp(conductance,'inh')
+                newConductanceTrace = obj.gInhMultiplier .* newConductanceTrace; %nS
+            end
 
             %map conductance (nS) to DAC output (V) to match expectation of
             %Arduino...
@@ -131,7 +134,7 @@ classdef NatImageDynamicClamp < edu.washington.riekelab.protocols.RiekeLabProtoc
             if drawIndex == 1
                 obj.imageSequence = randsample(obj.imageSequence, length(obj.imageSequence));
             end
-            obj.currentImageIndex = obj.imageSequence(drawIndex);
+            obj.currentImageIndex = drawIndex; %index of image in imageSequence of gClamp stim file
             
             % get conductance stim from sequence
             drawIndex = mod(obj.numEpochsCompleted,length(obj.stimSequence.exc)) + 1;

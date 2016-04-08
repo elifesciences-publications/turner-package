@@ -27,19 +27,19 @@ classdef OldSliceWithDynamicClampAndMicrodisplay < symphonyui.core.descriptions.
             ramps('medium')  = obj.MICRODISPLAY_MEDIUM_GAMMA_RAMP * 65535;
             ramps('high')    = obj.MICRODISPLAY_HIGH_GAMMA_RAMP * 65535;
             ramps('maximum') = linspace(0, 65535, 256);
-            microdisplay = edu.washington.rieke.devices.MicrodisplayDevice(ramps, 'COM3');
+            microdisplay = edu.washington.riekelab.devices.MicrodisplayDevice(ramps, 'COM3');
             microdisplay.addConfigurationSetting('micronsPerPixel', 1.2, 'isReadOnly', true);
             obj.addDevice(microdisplay);
             frameMonitor = UnitConvertingDevice('Frame Monitor', 'V').bindStream(obj.daqController.getStream('ANALOG_IN.7'));
             obj.addDevice(frameMonitor);
             
             %DYNAMIC CLAMP STUFF
-            currentInjected = UnitConvertingDevice('Injected current', 'V').bindStream(obj.daqController.getStream('ANALOG_IN.4'));
+            currentInjected = UnitConvertingDevice('Injected current', 'V').bindStream(obj.daqController.getStream('ANALOG_IN.1'));
             obj.addDevice(currentInjected);
             
-            gExc = UnitConvertingDevice('Excitatory conductance', 'V').bindStream(daq.getStream('ANALOG_OUT.1'));
+            gExc = UnitConvertingDevice('Excitatory conductance', 'V').bindStream(daq.getStream('ANALOG_OUT.2'));
             obj.addDevice(gExc);
-            gInh = UnitConvertingDevice('Inhibitory conductance', 'V').bindStream(daq.getStream('ANALOG_OUT.2'));
+            gInh = UnitConvertingDevice('Inhibitory conductance', 'V').bindStream(daq.getStream('ANALOG_OUT.3'));
             obj.addDevice(gInh);
             
         end
