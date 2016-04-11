@@ -5,11 +5,14 @@ classdef MeanResponseFigure < symphonyui.core.FigureHandler
         groupBy
         sweepColor
         recordingType
+        storedSweepColor
     end
     
     properties (Access = private)
         axesHandle
         sweeps
+        storedSweep
+        sweepIndex
     end
     
     methods
@@ -20,18 +23,30 @@ classdef MeanResponseFigure < symphonyui.core.FigureHandler
             ip = inputParser();
             ip.addParameter('groupBy', [], @(x)iscellstr(x));
             ip.addParameter('sweepColor', co(1,:), @(x)ischar(x) || isvector(x));
+            ip.addParameter('storedSweepColor', 'r', @(x)ischar(x) || isvector(x));
             ip.addParameter('recordingType', [], @(x)ischar(x));
             ip.parse(varargin{:});
             
             obj.device = device;
             obj.groupBy = ip.Results.groupBy;
             obj.sweepColor = ip.Results.sweepColor;
+            obj.storedSweepColor = ip.Results.storedSweepColor;
             obj.recordingType = ip.Results.recordingType;
             
             obj.createUi();
         end
         
         function createUi(obj)
+            import appbox.*;
+            
+            toolbar = findall(obj.figureHandle, 'Type', 'uitoolbar');
+            storeSweepButton = uipushtool( ...
+                'Parent', toolbar, ...
+                'TooltipString', 'Store Sweep', ...
+                'Separator', 'on', ...
+                'ClickedCallback', @obj.onSelectedStoreSweep);
+            setIconImage(storeSweepButton, symphonyui.app.App.getResource('icons/sweep_store.png'));
+            
             obj.axesHandle = axes( ...
                 'Parent', obj.figureHandle, ...
                 'FontName', get(obj.figureHandle, 'DefaultUicontrolFontName'), ...
@@ -97,28 +112,49 @@ classdef MeanResponseFigure < symphonyui.core.FigureHandler
             end
             obj.setTitle([obj.device.name ' Mean Response (' t ')']);
             
-            sweepIndex = [];
+            obj.sweepIndex = [];
             for i = 1:numel(obj.sweeps)
                 if isequal(obj.sweeps{i}.parameters, parameters)
-                    sweepIndex = i;
+                    obj.sweepIndex = i;
                     break;
                 end
             end
             
-            if isempty(sweepIndex)
+            if isempty(obj.sweepIndex)
                 sweep.line = line(x, y, 'Parent', obj.axesHandle, 'Color', obj.sweepColor);
                 sweep.parameters = parameters;
                 sweep.count = 1;
                 obj.sweeps{end + 1} = sweep;
             else
-                sweep = obj.sweeps{sweepIndex};
+                sweep = obj.sweeps{obj.sweepIndex};
                 cy = get(sweep.line, 'YData');
                 set(sweep.line, 'YData', (cy * sweep.count + y) / (sweep.count + 1));
                 sweep.count = sweep.count + 1;
-                obj.sweeps{sweepIndex} = sweep;
+                obj.sweeps{obj.sweepIndex} = sweep;
             end
-            
             ylabel(obj.axesHandle, units, 'Interpreter', 'none');
+        end
+        
+    end
+    
+    methods (Access = private)
+        
+        function onSelectedStoreSweep(obj, ~, ~)
+            if ~isempty(obj.storedSweep)
+                delete(obj.storedSweep.line);
+                delete(obj.storedSweep.parameters);
+                delete(obj.storedSweep.count);
+            end
+            if isempty(obj.sweepIndex)
+                sweepPull = 1;
+            else
+                sweepPull = obj.sweepIndex;
+            end
+            obj.storedSweep = obj.sweeps{sweepPull};
+%             obj.storedSweep = copyobj(obj.sweeps{sweepPull}, obj.axesHandle);
+            set(obj.storedSweep.line, ...
+                'Color', obj.storedSweepColor, 'LineWidth', 1, ...
+                'HandleVisibility', 'off');
         end
         
     end
