@@ -30,6 +30,8 @@ classdef NatImageDynamicClamp < edu.washington.riekelab.protocols.RiekeLabProtoc
         
         currentConductanceStim %struct with fields .exc and .inh (vals str: image, disc, or tonic)
         currentConductanceTrial %struct with fields .exc and .inh (vals int)
+        
+        resourcesDir
     end
     
     properties (Hidden, Transient)
@@ -55,9 +57,9 @@ classdef NatImageDynamicClamp < edu.washington.riekelab.protocols.RiekeLabProtoc
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.protocols.RiekeLabProtocol(obj);
             
-            resourcesDir = 'C:\Users\Max Turner\Documents\GitHub\Turner-protocols\resources\gClampStims\NIFgClampTraces\';
+            obj.resourcesDir = 'C:\Users\Max Turner\Documents\GitHub\turner-package\resources\gClampStims\NIFgClampTraces\';
             fileID = [obj.ConductanceSet,'.mat'];
-            load(fullfile(resourcesDir, fileID));   
+            load(fullfile(obj.resourcesDir, fileID));   
             obj.imageSequence = res.imageIndex;
             
             %create conductance label sequence
@@ -75,20 +77,26 @@ classdef NatImageDynamicClamp < edu.washington.riekelab.protocols.RiekeLabProtoc
             end
 
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
-            obj.showFigure('edu.washington.rieke.turner.figures.MeanResponseFigure',...
-                obj.rig.getDevice(obj.amp));
-            obj.showFigure('edu.washington.rieke.turner.figures.DynamicClampFigure',...
+            obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
+                obj.rig.getDevice(obj.amp),'groupBy',{'currentImageIndex'});
+            obj.showFigure('edu.washington.riekelab.turner.figures.DynamicClampFigure',...
                 obj.rig.getDevice(obj.amp), obj.rig.getDevice('Excitatory conductance'),...
                 obj.rig.getDevice('Inhibitory conductance'), obj.rig.getDevice('Injected current'),...
                 obj.ExcReversal, obj.InhReversal);
-
+            
+            %set the backgrounds on the conductance commands
+            %0.05 V command per 1 nS conductance
+            excBackground = mean(mean(res.exc.image{1}(:,1:res.stimStart))) .* 0.05;
+            inhBackground = mean(mean(res.inh.image{1}(:,1:res.stimStart))) .* 0.05;
+            obj.rig.getDevice('Excitatory conductance').background = symphonyui.core.Measurement(excBackground, 'V');
+            obj.rig.getDevice('Inhibitory conductance').background = symphonyui.core.Measurement(inhBackground, 'V');
+            
         end
         
         function stim = createConductanceStimulus(obj,conductance)
             %conductance is string: 'exc' or 'inh'
-            resourcesDir = 'C:\Users\Max Turner\Documents\GitHub\Turner-protocols\resources\gClampStims\NIFgClampTraces\';
             fileID = [obj.ConductanceSet,'.mat'];
-            load(fullfile(resourcesDir, fileID));   
+            load(fullfile(obj.resourcesDir, fileID));   
             gen = symphonyui.builtin.stimuli.WaveformGenerator();
             gen.sampleRate = obj.sampleRate;
             gen.units = 'V';

@@ -1,16 +1,17 @@
-classdef ExpandingSpots < edu.washington.riekelab.protocols.RiekeLabStageProtocol
+classdef ContrastResponseSpots < edu.washington.riekelab.protocols.RiekeLabStageProtocol
     
     properties
         preTime = 250 % ms
         stimTime = 500 % ms
-        tailTime = 250 % ms
-        spotIntensity = 1.0 % (0-1)
-        spotSizes = [40 80 120 160 180 200 220 240 280 320 460 600] % um
+        tailTime = 250
+        spotContrast = [-0.9 -0.75 -0.5 -0.25 -0.125 0.125 0.25 0.5 0.75 0.9] % relative to mean
+        spotDiameter = 300 % um
+        maskDiameter = 0 % um
         randomizeOrder = false
         backgroundIntensity = 0.5 % (0-1)
         centerOffset = [0, 0] % [x,y] (um)
         onlineAnalysis = 'none'
-        numberOfAverages = uint16(100) % number of epochs to queue
+        numberOfAverages = uint16(40) % number of epochs to queue
         amp % Output amplifier
     end
 
@@ -18,62 +19,66 @@ classdef ExpandingSpots < edu.washington.riekelab.protocols.RiekeLabStageProtoco
         ampType
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
         
-        spotSizeSequence
-        currentSpotSize
+        
+        spotContrastSequence
+        currentSpotContrast
     end
     
     properties (Hidden, Transient)
         analysisFigure
     end
-
+    
     methods
         
         function didSetRig(obj)
             didSetRig@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
             [obj.amp, obj.ampType] = obj.createDeviceNamesProperty('Amp');
         end
-        
+         
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
             
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
-            obj.showFigure('edu.washington.rieke.turner.figures.MeanResponseFigure',...
-                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,'groupBy',{'currentSpotSize'});
-            obj.showFigure('edu.washington.rieke.turner.figures.FrameTimingFigure',...
+            obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
+                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,'groupBy',{'currentSpotContrast'});
+            obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
             if ~strcmp(obj.onlineAnalysis,'none')
                 % custom figure handler
                 if isempty(obj.analysisFigure) || ~isvalid(obj.analysisFigure)
-                    obj.analysisFigure = obj.showFigure('symphonyui.builtin.figures.CustomFigure', @obj.expandingSpotAnalysis);
+                    obj.analysisFigure = obj.showFigure('symphonyui.builtin.figures.CustomFigure', @obj.contrastResponseAnalysis);
                     f = obj.analysisFigure.getFigureHandle();
-                    set(f, 'Name', 'Area Summation');
-                    obj.analysisFigure.userData.countBySize = zeros(size(obj.spotSizes));
-                    obj.analysisFigure.userData.responseBySize = zeros(size(obj.spotSizes));
+                    set(f, 'Name', 'Contrast response function');
+                    obj.analysisFigure.userData.countByContrast = zeros(size(obj.spotContrast));
+                    obj.analysisFigure.userData.responseByContrast = zeros(size(obj.spotContrast));
                     obj.analysisFigure.userData.axesHandle = axes('Parent', f);
                 else
-                    obj.analysisFigure.userData.countBySize = zeros(size(obj.spotSizes));
-                    obj.analysisFigure.userData.responseBySize = zeros(size(obj.spotSizes));
+                    obj.analysisFigure.userData.countByContrast = zeros(size(obj.spotContrast));
+                    obj.analysisFigure.userData.responseByContrast = zeros(size(obj.spotContrast));
                 end
                 
             end
-            % Create spot size sequence.
-            obj.spotSizeSequence = obj.spotSizes;
+            % Create spot contrast sequence.
+            obj.spotContrastSequence = obj.spotContrast;
         end
         
-        function expandingSpotAnalysis(obj, ~, epoch) %online analysis function
+        function contrastResponseAnalysis(obj, ~, epoch) %online analysis function
             response = epoch.getResponse(obj.rig.getDevice(obj.amp));
             epochResponseTrace = response.getData();
             sampleRate = response.sampleRate.quantityInBaseUnits;
             
             axesHandle = obj.analysisFigure.userData.axesHandle;
-            countBySize = obj.analysisFigure.userData.countBySize;
-            responseBySize = obj.analysisFigure.userData.responseBySize;
+            countByContrast = obj.analysisFigure.userData.countByContrast;
+            responseByContrast = obj.analysisFigure.userData.responseByContrast;
             
             if strcmp(obj.onlineAnalysis,'extracellular') %spike recording
-                %take (prePts+1:prePts+stimPts)
-                epochResponseTrace = epochResponseTrace((sampleRate*obj.preTime/1000)+1:(sampleRate*(obj.preTime + obj.stimTime)/1000));
                 %count spikes
                 S = spikeDetectorOnline(epochResponseTrace);
+                prePts = sampleRate*obj.preTime/1e3;
+                stimPts = sampleRate*obj.stimTime/1e3;
+                S.sp(S.sp < prePts) = [];
+                S.sp(S.sp > stimPts + prePts) = [];
+                
                 newEpochResponse = length(S.sp); %spike count
             else %intracellular - Vclamp
                 epochResponseTrace = epochResponseTrace-mean(epochResponseTrace(1:sampleRate*obj.preTime/1000)); %baseline
@@ -88,47 +93,55 @@ classdef ExpandingSpots < edu.washington.riekelab.protocols.RiekeLabStageProtoco
                 newEpochResponse = chargeMult*trapz(epochResponseTrace(1:sampleRate*obj.stimTime/1000)); %pA*datapoint
                 newEpochResponse = newEpochResponse/sampleRate; %pA*sec = pC
             end
-            spotInd = find(obj.currentSpotSize == obj.spotSizes);
-            
-            countBySize(spotInd) = countBySize(spotInd) + 1;
-            responseBySize(spotInd) = responseBySize(spotInd) + newEpochResponse;
+            contrastInd = find(obj.currentSpotContrast == obj.spotContrast);
+            countByContrast(contrastInd) = countByContrast(contrastInd) + 1;
+            responseByContrast(contrastInd) = responseByContrast(contrastInd) + newEpochResponse;
             
             cla(axesHandle);
-            h = line(obj.spotSizes, responseBySize./countBySize, 'Parent', axesHandle);
+            h = line(obj.spotContrast, responseByContrast./countByContrast, 'Parent', axesHandle);
             set(h,'Color',[0 0 0],'LineWidth',2,'Marker','o');
-            xlabel(axesHandle,'Spot size (um)')
+            xlabel(axesHandle,'Contrast')
             if strcmp(obj.onlineAnalysis,'extracellular')
                 ylabel(axesHandle,'Spike count')
             else
                 ylabel(axesHandle,'Charge transfer (pC)')
             end
-            obj.analysisFigure.userData.countBySize = countBySize;
-            obj.analysisFigure.userData.responseBySize = responseBySize;
+            obj.analysisFigure.userData.countByContrast = countByContrast;
+            obj.analysisFigure.userData.responseByContrast = responseByContrast;
         end
-        
+
         function p = createPresentation(obj)
             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
             
             %convert from microns to pixels...
-            spotDiameterPix = obj.um2pix(obj.currentSpotSize);
+            spotDiameterPix = obj.um2pix(obj.spotDiameter);
             centerOffsetPix = obj.um2pix(obj.centerOffset);
+            maskDiameterPix = obj.um2pix(obj.maskDiameter);
             
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
             
             % Create spot stimulus.            
             spot = stage.builtin.stimuli.Ellipse();
-            spot.color = obj.spotIntensity;
+            spot.color = obj.backgroundIntensity + (obj.backgroundIntensity*obj.currentSpotContrast);
             spot.radiusX = spotDiameterPix/2;
             spot.radiusY = spotDiameterPix/2;
             spot.position = canvasSize/2 + centerOffsetPix;
             p.addStimulus(spot);
             
+            if (obj.maskDiameter > 0) % Create mask
+                mask = stage.builtin.stimuli.Ellipse();
+                mask.position = canvasSize/2 + centerOffsetPix;
+                mask.color = obj.backgroundIntensity;
+                mask.radiusX = maskDiameterPix/2;
+                mask.radiusY = maskDiameterPix/2;
+                p.addStimulus(mask); %add mask
+            end
+            
             % hide during pre & post
             spotVisible = stage.builtin.controllers.PropertyController(spot, 'visible', ...
                 @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
             p.addController(spotVisible);
-
         end
         
         function prepareEpoch(obj, epoch)
@@ -138,13 +151,13 @@ classdef ExpandingSpots < edu.washington.riekelab.protocols.RiekeLabStageProtoco
             epoch.addDirectCurrentStimulus(device, device.background, duration, obj.sampleRate);
             epoch.addResponse(device);
             
-            index = mod(obj.numEpochsCompleted, length(obj.spotSizeSequence)) + 1;
-            % Randomize the spot size sequence order at the beginning of each sequence.
+            index = mod(obj.numEpochsCompleted, length(obj.spotContrastSequence)) + 1;
+            % Randomize the spot contrast sequence order at the beginning of each sequence.
             if index == 1 && obj.randomizeOrder
-                obj.spotSizeSequence = randsample(obj.spotSizeSequence, length(obj.spotSizeSequence));
+                obj.spotContrastSequence = randsample(obj.spotContrastSequence, length(obj.spotContrastSequence));
             end
-            obj.currentSpotSize = obj.spotSizeSequence(index);
-            epoch.addParameter('currentSpotSize', obj.currentSpotSize);
+            obj.currentSpotContrast = obj.spotContrastSequence(index);
+            epoch.addParameter('currentSpotContrast', obj.currentSpotContrast);
         end
 
         function tf = shouldContinuePreparingEpochs(obj)
@@ -154,7 +167,6 @@ classdef ExpandingSpots < edu.washington.riekelab.protocols.RiekeLabStageProtoco
         function tf = shouldContinueRun(obj)
             tf = obj.numEpochsCompleted < obj.numberOfAverages;
         end
-        
     end
     
 end

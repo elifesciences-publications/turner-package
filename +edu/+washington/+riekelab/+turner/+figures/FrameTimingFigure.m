@@ -58,7 +58,7 @@ classdef FrameTimingFigure < symphonyui.core.FigureHandler
                 set(obj.flipTimingSweep, 'XData', x, 'YData', y .* 1e3);
             end
             
-            if isa(obj.stageDevice,'edu.washington.rieke.devices.LightCrafterDevice')
+            if isa(obj.stageDevice,'edu.washington.riekelab.devices.LightCrafterDevice')
                 lightCrafterFlag = 1;
                 ideal = 1/obj.stageDevice.getPatternRate();
             else %OLED stage device
@@ -76,7 +76,7 @@ classdef FrameTimingFigure < symphonyui.core.FigureHandler
             times = getFrameTiming(FMdata,lightCrafterFlag);
 
             durations = diff(times(:));
-            if isa(obj.stageDevice,'edu.washington.rieke.devices.LightCrafterDevice')
+            if isa(obj.stageDevice,'edu.washington.riekelab.devices.LightCrafterDevice')
                 durations(1) = []; %first frame duration is tricky at the highest frame rates
             end
             minDuration = min(durations) / sampleRate;

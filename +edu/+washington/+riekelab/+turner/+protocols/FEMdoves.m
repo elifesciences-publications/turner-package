@@ -38,9 +38,9 @@ classdef FEMdoves < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             prepareRun@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
             
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
-            obj.showFigure('edu.washington.rieke.turner.figures.MeanResponseFigure',...
+            obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis);
-            obj.showFigure('edu.washington.rieke.turner.figures.FrameTimingFigure',...
+            obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
             
             %load eye movement stimulus data
@@ -177,7 +177,7 @@ classdef FEMdoves < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         
         %override to handle pre-rendering and replaying
         function controllerDidStartHardware(obj)
-            controllerDidStartHardware@edu.washington.rieke.protocols.RiekeProtocol(obj);
+            controllerDidStartHardware@edu.washington.riekelab.protocols.RiekeLabProtocol(obj);
             if (obj.preRender)
                 if (obj.numEpochsCompleted >= 1) && (obj.numEpochsCompleted < obj.numberOfAverages)
                     obj.rig.getDevice('Stage').replay
