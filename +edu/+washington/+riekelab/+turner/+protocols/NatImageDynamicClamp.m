@@ -10,6 +10,7 @@ classdef NatImageDynamicClamp < edu.washington.riekelab.protocols.RiekeLabProtoc
         InterleaveTonic = false; %{image-image / image-tonic / tonic-image}
         ExcReversal = 10;
         InhReversal = -70;
+        MeanConductanceTrace = true %Average conductance trace (over trials) or randomly choose individual trials
         
         amp                             % Input amplifier
         numberOfAverages = uint16(5)    % Number of epochs
@@ -45,15 +46,6 @@ classdef NatImageDynamicClamp < edu.washington.riekelab.protocols.RiekeLabProtoc
             [obj.amp, obj.ampType] = obj.createDeviceNamesProperty('Amp');
         end
         
-%         function p = getPreview(obj, panel)
-%             p = symphonyui.builtin.previews.StimuliPreview(panel, @()createPreviewStimuli(obj));
-%             function s = createPreviewStimuli(obj)
-%                 s = cell(1, 2);
-%                 s{1} = obj.createConductanceStimulus('exc');
-%                 s{2} = obj.createConductanceStimulus('inh');
-%             end
-%         end
-        
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.protocols.RiekeLabProtocol(obj);
             
@@ -84,13 +76,81 @@ classdef NatImageDynamicClamp < edu.washington.riekelab.protocols.RiekeLabProtoc
                 obj.rig.getDevice('Inhibitory conductance'), obj.rig.getDevice('Injected current'),...
                 obj.ExcReversal, obj.InhReversal);
             
+            % custom figure handler
+            if isempty(obj.analysisFigure) || ~isvalid(obj.analysisFigure)
+                obj.analysisFigure = obj.showFigure('symphonyui.builtin.figures.CustomFigure', @obj.NIFgClamp);
+                f = obj.analysisFigure.getFigureHandle();
+                set(f, 'Name', 'NIF gClamp');
+                obj.analysisFigure.userData.iiCount = 0;
+                obj.analysisFigure.userData.ddCount = 0;
+                obj.analysisFigure.userData.idCount = 0;
+                obj.analysisFigure.userData.diCount = 0;
+                obj.analysisFigure.userData.axesHandle = axes('Parent', f,...
+                    'FontName', get(f, 'DefaultUicontrolFontName'),...
+                    'FontSize', get(f, 'DefaultUicontrolFontSize'), ...
+                    'XTickMode', 'auto');
+                xlabel(obj.analysisFigure.userData.axesHandle, 'Image');
+                ylabel(obj.analysisFigure.userData.axesHandle, 'Disc');
+            end
+            
             %set the backgrounds on the conductance commands
             %0.05 V command per 1 nS conductance
             excBackground = mean(mean(res.exc.image{1}(:,1:res.stimStart))) .* 0.05;
             inhBackground = mean(mean(res.inh.image{1}(:,1:res.stimStart))) .* 0.05;
             obj.rig.getDevice('Excitatory conductance').background = symphonyui.core.Measurement(excBackground, 'V');
             obj.rig.getDevice('Inhibitory conductance').background = symphonyui.core.Measurement(inhBackground, 'V');
+        end
+        
+        function NIFgClamp(obj, ~, epoch) %online analysis function
+            response = epoch.getResponse(obj.rig.getDevice(obj.amp));
+            Vdata = response.getData();
+            sampleRate = response.sampleRate.quantityInBaseUnits;
             
+            axesHandle = obj.analysisFigure.userData.axesHandle;
+            iiCount = obj.analysisFigure.userData.iiCount;
+            ddCount = obj.analysisFigure.userData.ddCount;
+            idCount = obj.analysisFigure.userData.idCount;
+            diCount = obj.analysisFigure.userData.diCount;
+            
+            fileID = [obj.ConductanceSet,'.mat'];
+            load(fullfile(obj.resourcesDir, fileID));
+            
+            %get iClamp spikes
+            threshold = -20; %mV - hardcoded for now, could be param?
+            spikesUp=getThresCross(Vdata,threshold,1);
+            spikesDown=getThresCross(Vdata,threshold,-1);
+            newSpikeCount = length(spikesUp(spikesUp>res.stimStart & spikesUp<res.stimEnd));
+
+            if strcmp(obj.currentConductanceStim.exc,'Image')
+                if strcmp(obj.currentConductanceStim.inh,'Image')
+                    iiCount(obj.currentImageIndex) = newSpikeCount;
+                elseif strcmp(obj.currentConductanceStim.inh,'Disc')
+                    idCount(obj.currentImageIndex) = newSpikeCount;
+                end
+            elseif strcmp(obj.currentConductanceStim.exc,'Disc')
+                if strcmp(obj.currentConductanceStim.inh,'Image')
+                    diCount(obj.currentImageIndex) = newSpikeCount;
+                elseif strcmp(obj.currentConductanceStim.inh,'Disc')
+                    ddCount(obj.currentImageIndex) = newSpikeCount;
+                end
+            end
+            
+            hd = line(res.spikes.image,res.spikes.disc,'Parent',axesHandle);
+            set(hd,'Color','g','LineStyle','none','Marker','x')
+            yUp = 1.3*max([res.spikes.image,res.spikes.disc]);
+            hu = line([0 yUp],[0 yUp],'Parent',axesHandle);
+            set(hu,'Color','k','LineStyle','--')
+            
+            if length(iiCount) == length(ddCount)
+                hd = line(iiCount,ddCount,'Parent',axesHandle);
+                set(hd,'Color','k','LineStyle','none','Marker','o')
+            end
+            
+            obj.analysisFigure.userData.axesHandle = axesHandle;
+            obj.analysisFigure.userData.iiCount = iiCount;
+            obj.analysisFigure.userData.ddCount = ddCount;
+            obj.analysisFigure.userData.idCount = idCount;
+            obj.analysisFigure.userData.diCount = diCount;
         end
         
         function stim = createConductanceStimulus(obj,conductance)
@@ -101,18 +161,34 @@ classdef NatImageDynamicClamp < edu.washington.riekelab.protocols.RiekeLabProtoc
             gen.sampleRate = obj.sampleRate;
             gen.units = 'V';
             if strcmp(obj.currentConductanceStim.(conductance),'Image')
-                obj.currentConductanceTrial.(conductance) = ...
-                    randsample(1:size(res.(conductance).image{obj.currentImageIndex},1),1);
-                newConductanceTrace = res.(conductance).image{obj.currentImageIndex}(obj.currentConductanceTrial.(conductance),:);
+                if (obj.MeanConductanceTrace)
+                    obj.currentConductanceTrial.(conductance) = [];
+                    newConductanceTrace = mean(res.(conductance).image{obj.currentImageIndex});
+                else
+                    obj.currentConductanceTrial.(conductance) = ...
+                        randsample(1:size(res.(conductance).image{obj.currentImageIndex},1),1);
+                    newConductanceTrace = res.(conductance).image{obj.currentImageIndex}(obj.currentConductanceTrial.(conductance),:);
+                end
             elseif strcmp(obj.currentConductanceStim.(conductance),'Disc')
-                obj.currentConductanceTrial.(conductance) = ...
-                    randsample(1:size(res.(conductance).disc{obj.currentImageIndex},1),1);
-                newConductanceTrace = res.(conductance).disc{obj.currentImageIndex}(obj.currentConductanceTrial.(conductance),:);
+                if (obj.MeanConductanceTrace)
+                    obj.currentConductanceTrial.(conductance) = [];
+                    newConductanceTrace = mean(res.(conductance).disc{obj.currentImageIndex});
+                else
+                    obj.currentConductanceTrial.(conductance) = ...
+                        randsample(1:size(res.(conductance).disc{obj.currentImageIndex},1),1);
+                    newConductanceTrace = res.(conductance).disc{obj.currentImageIndex}(obj.currentConductanceTrial.(conductance),:);
+                end
             elseif strcmp(obj.currentConductanceStim.(conductance),'Tonic')
-                obj.currentConductanceTrial.(conductance) = ...
-                    randsample(1:size(res.(conductance).image{obj.currentImageIndex},1),1);
-                temp = res.(conductance).image{obj.currentImageIndex}(obj.currentConductanceTrial.(conductance),:);
-                newConductanceTrace = mean(temp(1:res.stimStart)) .* ones(size(temp));
+                if (obj.MeanConductanceTrace)
+                    obj.currentConductanceTrial.(conductance) = [];
+                    temp = mean(res.(conductance).image{obj.currentImageIndex});
+                    newConductanceTrace = mean(temp(1:res.stimStart)) .* ones(size(temp));
+                else
+                    obj.currentConductanceTrial.(conductance) = ...
+                        randsample(1:size(res.(conductance).image{obj.currentImageIndex},1),1);
+                    temp = res.(conductance).image{obj.currentImageIndex}(obj.currentConductanceTrial.(conductance),:);
+                    newConductanceTrace = mean(temp(1:res.stimStart)) .* ones(size(temp));
+                end     
             end
             if strcmp(conductance,'exc')
                 newConductanceTrace = obj.gExcMultiplier .* newConductanceTrace; %nS
