@@ -60,11 +60,10 @@ classdef FrameTimingFigure < symphonyui.core.FigureHandler
             
             if isa(obj.stageDevice,'edu.washington.riekelab.devices.LightCrafterDevice')
                 lightCrafterFlag = 1;
-                ideal = 1/obj.stageDevice.getPatternRate();
             else %OLED stage device
                 lightCrafterFlag = 0;
-                ideal = 1/obj.stageDevice.getMonitorRefreshRate();
             end
+            ideal = 1/obj.stageDevice.getMonitorRefreshRate();
             
             %load frame monitor data
             FMresponse = epoch.getResponse(obj.frameMonitor);
@@ -74,15 +73,11 @@ classdef FrameTimingFigure < symphonyui.core.FigureHandler
 
             %check frame timing
             times = getFrameTiming(FMdata,lightCrafterFlag);
-
             durations = diff(times(:));
-            if isa(obj.stageDevice,'edu.washington.riekelab.devices.LightCrafterDevice')
-                durations(1) = []; %first frame duration is tricky at the highest frame rates
-            end
             minDuration = min(durations) / sampleRate;
             maxDuration = max(durations) / sampleRate;
 
-            if abs(ideal-minDuration)/ideal > 0.2 || abs(ideal-maxDuration)/ideal > 0.2
+            if abs(ideal-minDuration)/ideal > 0.05 || abs(ideal-maxDuration)/ideal > 0.05
                 lineColor = 'r';
                 epoch.addKeyword('badFrameTiming');
             else
