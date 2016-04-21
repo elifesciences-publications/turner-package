@@ -146,6 +146,18 @@ classdef ExpandingSpots < edu.washington.riekelab.protocols.RiekeLabStageProtoco
             obj.currentSpotSize = obj.spotSizeSequence(index);
             epoch.addParameter('currentSpotSize', obj.currentSpotSize);
         end
+        
+%         %override to handle pre-rendering and replaying
+%         function controllerDidStartHardware(obj)
+%             controllerDidStartHardware@edu.washington.riekelab.protocols.RiekeLabProtocol(obj);
+% 
+%                 if (obj.numEpochsCompleted >= 1) && (obj.numEpochsCompleted < obj.numberOfAverages)
+%                     obj.rig.getDevice('Stage').replay
+%                 else
+%                     obj.rig.getDevice('Stage').play(obj.createPresentation(),true);
+%                 end
+% 
+%         end
 
         function tf = shouldContinuePreparingEpochs(obj)
             tf = obj.numEpochsPrepared < obj.numberOfAverages;

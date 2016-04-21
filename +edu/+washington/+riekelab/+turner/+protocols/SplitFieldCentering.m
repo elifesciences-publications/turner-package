@@ -182,6 +182,15 @@ classdef SplitFieldCentering < edu.washington.riekelab.protocols.RiekeLabStagePr
             epoch.addResponse(device);
         end
         
+        %same presentation each epoch in a run. Replay.
+        function controllerDidStartHardware(obj)
+            controllerDidStartHardware@edu.washington.riekelab.protocols.RiekeLabProtocol(obj);
+            if (obj.numEpochsCompleted >= 1) && (obj.numEpochsCompleted < obj.numberOfAverages)
+                obj.rig.getDevice('Stage').replay
+            else
+                obj.rig.getDevice('Stage').play(obj.createPresentation());
+            end
+        end
         
         function tf = shouldContinuePreparingEpochs(obj)
             tf = obj.numEpochsPrepared < obj.numberOfAverages;

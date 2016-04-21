@@ -9,7 +9,6 @@ classdef FEMdoves < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         centerOffset = [0, 0] % [x,y] (um)
         apertureDiameter = 0 % um
         maskDiameter = 0 % um
-        preRender = false %pre-render stimulus at the beginning of a run
         onlineAnalysis = 'none'
         numberOfAverages = uint16(20) % number of epochs to queue
         amp % Output amplifier
@@ -45,7 +44,7 @@ classdef FEMdoves < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             
             %load eye movement stimulus data
             %Change to resources directory
-            resourcesDir = 'C:\Users\Max Turner\Documents\GitHub\Turner-protocols\resources\';
+            resourcesDir = 'C:\Users\Max Turner\Documents\GitHub\turner-package\resources\';
             obj.currentStimSet = 'dovesFEMstims_20160126.mat';
             load([resourcesDir, obj.currentStimSet]);
             imageName = FEMdata(obj.stimulusIndex).ImageName;
@@ -175,15 +174,11 @@ classdef FEMdoves < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             epoch.addParameter('backgroundIntensity', obj.backgroundIntensity);
         end
         
-        %override to handle pre-rendering and replaying
+        %same presentation each epoch in a run. Replay.
         function controllerDidStartHardware(obj)
             controllerDidStartHardware@edu.washington.riekelab.protocols.RiekeLabProtocol(obj);
-            if (obj.preRender)
-                if (obj.numEpochsCompleted >= 1) && (obj.numEpochsCompleted < obj.numberOfAverages)
-                    obj.rig.getDevice('Stage').replay
-                else
-                    obj.rig.getDevice('Stage').play(obj.createPresentation(),true);
-                end
+            if (obj.numEpochsCompleted >= 1) && (obj.numEpochsCompleted < obj.numberOfAverages)
+                obj.rig.getDevice('Stage').replay
             else
                 obj.rig.getDevice('Stage').play(obj.createPresentation());
             end
