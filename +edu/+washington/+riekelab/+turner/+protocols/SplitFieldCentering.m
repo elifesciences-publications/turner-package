@@ -152,8 +152,8 @@ classdef SplitFieldCentering < edu.washington.riekelab.protocols.RiekeLabStagePr
             aperture = stage.builtin.stimuli.Rectangle();
             aperture.position = canvasSize/2 + centerOffsetPix;
             aperture.color = obj.backgroundIntensity;
-            aperture.size = [max(canvasSize), max(canvasSize)];
-            mask = stage.core.Mask.createCircularAperture(spotDiameterPix/(max(canvasSize)), 1024); %circular aperture
+            aperture.size = [spotDiameterPix, spotDiameterPix];
+            mask = stage.core.Mask.createCircularAperture(1, 1024); %circular aperture
             aperture.setMask(mask);
             p.addStimulus(aperture); %add aperture
             

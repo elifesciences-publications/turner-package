@@ -97,8 +97,8 @@ classdef ContrastF1F2 < edu.washington.riekelab.protocols.RiekeLabStageProtocol
                 aperture = stage.builtin.stimuli.Rectangle();
                 aperture.position = canvasSize/2 + centerOffsetPix;
                 aperture.color = obj.backgroundIntensity;
-                aperture.size = [max(canvasSize), max(canvasSize)];
-                mask = stage.core.Mask.createCircularAperture(apertureDiameterPix/(max(canvasSize)), 1024); %circular aperture
+                aperture.size = [apertureDiameterPix, apertureDiameterPix];
+                mask = stage.core.Mask.createCircularAperture(1, 1024); %circular aperture
                 aperture.setMask(mask);
                 p.addStimulus(aperture); %add aperture
             end
