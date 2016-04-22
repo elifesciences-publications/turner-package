@@ -33,6 +33,11 @@ classdef ConfocalWithDynamicClampAndMicrodisplay < symphonyui.core.descriptions.
             frameMonitor = UnitConvertingDevice('Frame Monitor', 'V').bindStream(obj.daqController.getStream('ANALOG_IN.7'));
             obj.addDevice(frameMonitor);
             
+            % Binding the microdisplay to an unused stream only so its configuration settings are written to each epoch.
+            daq = obj.daqController;
+            microdisplay.bindStream(daq.getStream('DIGITAL_OUT.1'));
+            daq.getStream('DIGITAL_OUT.1').setBitPosition(microdisplay, 15);
+            
             %DYNAMIC CLAMP STUFF
             currentInjected = UnitConvertingDevice('Injected current', 'V').bindStream(obj.daqController.getStream('ANALOG_IN.1'));
             obj.addDevice(currentInjected);
