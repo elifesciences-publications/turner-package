@@ -3,6 +3,10 @@ function [frameTimes, frameRate] = getFrameTiming(frameMonitor,lcrFlag)
     %frameRate, mean over all flips, is frames/dataPoint
     %MHT 3/31/16 ported over to symphony 2.0 and split lcr from oled
     
+    if (lcrFlag == 0) %smooth out non-monotonicity (shows up on RigG)
+       frameMonitor = lowPassFilter(frameMonitor, 360, 1/1e4); 
+    end
+    
     %shift & scale s.t. fr monitor lives on [0,1]
     frameMonitor = frameMonitor - min(frameMonitor);
     frameMonitor = frameMonitor./max(frameMonitor);
@@ -18,17 +22,13 @@ function [frameTimes, frameRate] = getFrameTiming(frameMonitor,lcrFlag)
        frameTimes = round(sort([timesOdd'; timesEven']));
        
     else %OLED monitor, slower
-        %odd number of frames, just chop off last time who cares...
-        len = min([length(ups),length(downs)]);
-        ups = ups(1:len); downs = downs(1:len);
-        %more stable threshold cross at 0.5, but call flip time approximately
-        %at inflection points...
-        timesOdd = ups - (downs-ups)/2; timesOdd(1) = 0;
-        timesEven = downs - (downs-ups)/2;
-        frameTimes = round(sort([timesOdd'; timesEven']));
+        %just get peaks/troughs between first and last flips
+        tempFM = frameMonitor(ups(1):downs(end)); 
+        [~,flipsEven] = getPeaks(tempFM,1);
+        [~,flipsOdd] = getPeaks(tempFM,-1);
+        flipsEven = flipsEven + ups(1);
+        flipsOdd = [1 flipsOdd + ups(1)];
+        frameTimes = round(sort([flipsOdd'; flipsEven']));
     end
-    
-    
-    
-    
+
 end

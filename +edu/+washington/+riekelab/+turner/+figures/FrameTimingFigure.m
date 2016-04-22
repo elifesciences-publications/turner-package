@@ -1,3 +1,4 @@
+
 classdef FrameTimingFigure < symphonyui.core.FigureHandler
     
     properties (SetAccess = private)
@@ -77,7 +78,7 @@ classdef FrameTimingFigure < symphonyui.core.FigureHandler
             minDuration = min(durations) / sampleRate;
             maxDuration = max(durations) / sampleRate;
 
-            if abs(ideal-minDuration)/ideal > 0.05 || abs(ideal-maxDuration)/ideal > 0.05
+            if abs(ideal-minDuration)/ideal > 0.10 || abs(ideal-maxDuration)/ideal > 0.10
                 lineColor = 'r';
                 epoch.addKeyword('badFrameTiming');
             else
