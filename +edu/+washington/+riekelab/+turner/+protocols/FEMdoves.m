@@ -61,15 +61,8 @@ classdef FEMdoves < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             
             %get appropriate eye trajectories, at 200Hz
             if (obj.freezeFEMs) %freeze FEMs, hang on fixations
-                obj.xTraj = zeros(size(FEMdata(obj.stimulusIndex).eyeX));
-                obj.yTraj = obj.yTraj;
-                fixBoundaries = [FEMdata(obj.stimulusIndex).fixationStarts, length(obj.xTraj)+1];
-                for ff = 1:length(FEMdata(obj.stimulusIndex).fixationStarts)
-                    obj.xTraj(fixBoundaries(ff):(fixBoundaries(ff+1)-1)) = ...
-                        FEMdata(obj.stimulusIndex).eyeX(FEMdata(obj.stimulusIndex).fixationStarts(ff));
-                    obj.yTraj(fixBoundaries(ff):(fixBoundaries(ff+1)-1)) = ...
-                        FEMdata(obj.stimulusIndex).eyeY(FEMdata(obj.stimulusIndex).fixationStarts(ff));
-                end
+                obj.xTraj = FEMdata(obj.stimulusIndex).frozenX;
+                obj.yTraj = FEMdata(obj.stimulusIndex).frozenY;
             else %full FEM trajectories during fixations
                 obj.xTraj = FEMdata(obj.stimulusIndex).eyeX;
                 obj.yTraj = FEMdata(obj.stimulusIndex).eyeY;
