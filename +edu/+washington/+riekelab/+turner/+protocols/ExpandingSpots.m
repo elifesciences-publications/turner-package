@@ -110,8 +110,8 @@ classdef ExpandingSpots < edu.washington.riekelab.protocols.RiekeLabStageProtoco
             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
             
             %convert from microns to pixels...
-            spotDiameterPix = obj.um2pix(obj.currentSpotSize);
-            centerOffsetPix = obj.um2pix(obj.centerOffset);
+            spotDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.currentSpotSize);
+            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
             
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity

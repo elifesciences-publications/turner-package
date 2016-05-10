@@ -65,9 +65,9 @@ classdef ContrastF1F2 < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
             
             %convert from microns to pixels...
-            apertureDiameterPix = obj.um2pix(obj.apertureDiameter);
-            centerOffsetPix = obj.um2pix(obj.centerOffset);
-            maskDiameterPix = obj.um2pix(obj.maskDiameter);
+            apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
+            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
+            maskDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.maskDiameter);
             
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity

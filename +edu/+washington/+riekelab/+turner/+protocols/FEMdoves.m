@@ -90,9 +90,9 @@ classdef FEMdoves < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         function p = createPresentation(obj)
             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
             
-            maskDiameterPix = obj.um2pix(obj.maskDiameter);
-            apertureDiameterPix = obj.um2pix(obj.apertureDiameter);
-            centerOffsetPix = obj.um2pix(obj.centerOffset);
+            maskDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.maskDiameter);
+            apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
+            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
             
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3);
             p.setBackgroundColor(obj.backgroundIntensity);

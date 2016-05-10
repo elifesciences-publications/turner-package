@@ -4,9 +4,8 @@ classdef ConfocalWithLightCrafter < edu.washington.riekelab.rigs.Confocal
         
         function obj = ConfocalWithLightCrafter()
             import symphonyui.builtin.devices.*;
-            
-            lightCrafter = edu.washington.riekelab.devices.LightCrafterDevice();
-            lightCrafter.addConfigurationSetting('micronsPerPixel', 1.3, 'isReadOnly', true);
+
+            lightCrafter = edu.washington.riekelab.devices.LightCrafterDevice('micronsPerPixel', 1.3);
             obj.addDevice(lightCrafter);
             
             % Binding the lightCrafter to an unused stream only so its configuration settings are written to each epoch.

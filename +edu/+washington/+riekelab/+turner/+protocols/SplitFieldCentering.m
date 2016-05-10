@@ -116,9 +116,9 @@ classdef SplitFieldCentering < edu.washington.riekelab.protocols.RiekeLabStagePr
             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
             
             %convert from microns to pixels...
-            spotDiameterPix = obj.um2pix(obj.spotDiameter);
-            centerOffsetPix = obj.um2pix(obj.centerOffset);
-            maskDiameterPix = obj.um2pix(obj.maskDiameter);
+            spotDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.spotDiameter);
+            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
+            maskDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.maskDiameter);
             
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
