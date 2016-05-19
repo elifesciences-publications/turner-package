@@ -10,6 +10,7 @@ classdef ExpandingSpots < edu.washington.riekelab.protocols.RiekeLabStageProtoco
         backgroundIntensity = 0.5 % (0-1)
         centerOffset = [0, 0] % [x,y] (um)
         onlineAnalysis = 'none'
+        modelFit = 'none'
         numberOfAverages = uint16(100) % number of epochs to queue
         amp % Output amplifier
     end
@@ -17,9 +18,11 @@ classdef ExpandingSpots < edu.washington.riekelab.protocols.RiekeLabStageProtoco
     properties (Hidden)
         ampType
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
+        modelFitType = symphonyui.core.PropertyType('char', 'row', {'none','Gaussian', 'Difference of Gaussians'})
         
         spotSizeSequence
         currentSpotSize
+        runCompletedFlag
     end
     
     properties (Hidden, Transient)
@@ -35,6 +38,7 @@ classdef ExpandingSpots < edu.washington.riekelab.protocols.RiekeLabStageProtoco
         
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
+            obj.runCompletedFlag = 0;
             
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
@@ -104,6 +108,43 @@ classdef ExpandingSpots < edu.washington.riekelab.protocols.RiekeLabStageProtoco
             end
             obj.analysisFigure.userData.countBySize = countBySize;
             obj.analysisFigure.userData.responseBySize = responseBySize;
+            
+            
+            if (obj.runCompletedFlag) %stopped or hit numberOfAverages
+                if strcmp(obj.onlineAnalysis,'extracellular')
+                    R0upperBound = Inf;
+                else
+                    R0upperBound = 1e-6; %analog signals already baseline subtracted. Curve goes through [0,0]
+                end
+                
+                if strcmp(obj.modelFit,'Gaussian')
+                    params0 = [0.35,100,0]; % [kC, sigmaC, R0]
+                    fitRes = fitGaussianRFAreaSummation(obj.spotSizes,responseBySize./countBySize,params0,R0upperBound);
+                    fitX = 0:(1.1*max(obj.spotSizes));
+                    fitY = GaussianRFAreaSummation(fitX,fitRes.Kc,fitRes.sigmaC,fitRes.R0);
+                    h = line(fitX, fitY, 'Parent', axesHandle);
+                    set(h,'Color',[1 0 0],'LineWidth',2,'Marker','none');
+                    str = {['SigmaC = ',num2str(fitRes.sigmaC)]};
+                    dim = [0.2 0.5 0.3 0.3];
+                    annotation('textbox',dim,'String',str,'FitBoxToText','on');
+                    
+                elseif strcmp(obj.modelFit,'Difference of Gaussians')
+                    params0 = [0.35,35,0.08,300,0];
+                    fitRes = fitDoGAreaSummation(obj.spotSizes,responseBySize./countBySize,params0,R0upperBound);
+                    fitX = 0:(1.1*max(obj.spotSizes));
+                    fitY = DoGAreaSummation(fitX,fitRes.Kc,fitRes.sigmaC,fitRes.Ks,fitRes.sigmaS,fitRes.R0);
+                    h = line(fitX, fitY, 'Parent', axesHandle);
+                    set(h,'Color',[1 0 0],'LineWidth',2,'Marker','none');
+                    tempKc = fitRes.Kc / (fitRes.Kc + fitRes.Ks);
+                    str = {['SigmaC = ',num2str(fitRes.sigmaC)],['sigmaS = ',num2str(fitRes.sigmaS)],...
+                        ['Kc = ',num2str(tempKc)]};
+                    dim = [0.2 0.5 0.3 0.3];
+                    annotation('textbox',dim,'String',str,'FitBoxToText','on');
+                    
+                elseif strcmp(obj.modelFit,'none')
+
+                end
+            end
         end
         
         function p = createPresentation(obj)
@@ -146,18 +187,7 @@ classdef ExpandingSpots < edu.washington.riekelab.protocols.RiekeLabStageProtoco
             obj.currentSpotSize = obj.spotSizeSequence(index);
             epoch.addParameter('currentSpotSize', obj.currentSpotSize);
         end
-        
-%         %override to handle pre-rendering and replaying
-%         function controllerDidStartHardware(obj)
-%             controllerDidStartHardware@edu.washington.riekelab.protocols.RiekeLabProtocol(obj);
-% 
-%                 if (obj.numEpochsCompleted >= 1) && (obj.numEpochsCompleted < obj.numberOfAverages)
-%                     obj.rig.getDevice('Stage').replay
-%                 else
-%                     obj.rig.getDevice('Stage').play(obj.createPresentation(),true);
-%                 end
-% 
-%         end
+
 
         function tf = shouldContinuePreparingEpochs(obj)
             tf = obj.numEpochsPrepared < obj.numberOfAverages;
@@ -165,6 +195,12 @@ classdef ExpandingSpots < edu.washington.riekelab.protocols.RiekeLabStageProtoco
         
         function tf = shouldContinueRun(obj)
             tf = obj.numEpochsCompleted < obj.numberOfAverages;
+        end
+        
+        function completeRun(obj)
+            completeRun@edu.washington.riekelab.protocols.RiekeLabProtocol(obj);
+            obj.rig.getDevice('Stage').clearMemory();
+            obj.runCompletedFlag = 1;
         end
         
     end
