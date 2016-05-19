@@ -165,6 +165,7 @@ classdef FEMdoves < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             epoch.addDirectCurrentStimulus(device, device.background, duration, obj.sampleRate);
             epoch.addResponse(device);
             epoch.addParameter('backgroundIntensity', obj.backgroundIntensity);
+            epoch.addParameter('currentStimSet', obj.currentStimSet);
         end
         
         %same presentation each epoch in a run. Replay.
