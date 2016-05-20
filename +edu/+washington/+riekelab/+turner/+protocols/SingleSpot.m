@@ -2,9 +2,9 @@ classdef SingleSpot < edu.washington.riekelab.protocols.RiekeLabStageProtocol
     
     properties
         amp                             % Output amplifier
-        preTime = 500                   % Spot leading duration (ms)
-        stimTime = 1000                 % Spot duration (ms)
-        tailTime = 500                  % Spot trailing duration (ms)
+        preTime = 250                   % Spot leading duration (ms)
+        stimTime = 500                 % Spot duration (ms)
+        tailTime = 250                  % Spot trailing duration (ms)
         spotIntensity = 1.0             % Spot light intensity (0-1)
         spotDiameter = 300              % Spot diameter size (um)
         backgroundIntensity = 0.5       % Background light intensity (0-1)
