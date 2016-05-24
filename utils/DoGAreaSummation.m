@@ -1,10 +1,11 @@
 function res = DoGAreaSummation(spotSizes,Kc,sigmaC,Ks,sigmaS,R0)
 res = zeros(size(spotSizes));
-for jj = 1:length(spotSizes);
-sSize = spotSizes(jj);
-ss = -sSize/2 : sSize/2; %spot axis
-wt = Kc*exp(-(ss./(2*sigmaC)).^2) - Ks*exp(-(ss./(2*sigmaS)).^2); %weight at each location
+stimSize = round(max(spotSizes));
 
-res(jj) = R0 + trapz(wt); %integrate to get DoG response
+RF = Kc * fspecial('gaussian',stimSize,sigmaC) - Ks * fspecial('gaussian',stimSize,sigmaS);
 
+[rr, cc] = meshgrid(1:stimSize,1:stimSize);
+for ss = 1:length(spotSizes)
+    currentStimulus = sqrt((rr-round(stimSize/2)).^2+(cc-round(stimSize/2)).^2)<spotSizes(ss)/2;
+    res(ss) = R0 + sum(sum(currentStimulus .* RF));
 end

@@ -1,7 +1,7 @@
 function res = fitGaussianRFAreaSummation(spotSizes,responses,params0,R0upperBound)
     %params = [Kc,sigmaC,R0]
 
-    LB = [0, 0, -Inf]; UB = [Inf Inf R0upperBound];
+    LB = [0, 0, 0]; UB = [Inf Inf R0upperBound];
     fitOptions = optimset('MaxIter',2000,'MaxFunEvals',600*length(LB));
     
     fitfunc = @(params0,spotSizes) GaussianRFAreaSummation(spotSizes,params0(1),params0(2),params0(3));

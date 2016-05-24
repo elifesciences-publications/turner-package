@@ -1,7 +1,7 @@
 function res = fitDoGAreaSummation(spotSizes,responses,params0,R0upperBound)
     %params = [Kc,sigmaC,Ks,sigmaS,R0]
 
-    LB = [0, 0, 0, 0, -Inf]; UB = [Inf Inf Inf Inf R0upperBound];
+    LB = [0, 0, 0, 0, 0]; UB = [Inf Inf Inf Inf R0upperBound];
     fitOptions = optimset('MaxIter',2000,'MaxFunEvals',600*length(LB));
     
     fitfunc = @(params0,spotSizes) DoGAreaSummation(spotSizes,params0(1),params0(2),params0(3),params0(4),params0(5));
