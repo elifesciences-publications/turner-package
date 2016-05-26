@@ -1,4 +1,4 @@
-classdef LinearEquivalentImage < edu.washington.riekelab.protocols.RiekeLabStageProtocol
+classdef LinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabStageProtocol
 
     properties
         preTime = 200 % ms
@@ -8,17 +8,14 @@ classdef LinearEquivalentImage < edu.washington.riekelab.protocols.RiekeLabStage
         imageName = '00152' %van hateren image names
         seed = 1 % rand seed for picking image patches
         noPatches = 30 %number of different image patches (fixations) to show
-        apertureDiameter = 800 % um
-        maskDiameter = 0 % um
-        linearEquivalentStimulus = false
-        
-        rfSigmaCenter = 40 % (um) Enter from fit RF
-        rfWeightCenter = 0.85 % 1 for center only. Wc + Ws = 1
-        rfSigmaSurround = 180 % (um)
-        
+        apertureDiameter = 200 % um
+        linearIntegrationFunction = 'gaussian center'
+
+        rfSigmaCenter = 50 % (um) Enter from fit RF
+
         centerOffset = [0, 0] % [x,y] (um)
         onlineAnalysis = 'none'
-        numberOfAverages = uint16(90) % number of epochs to queue
+        numberOfAverages = uint16(180) % number of epochs to queue
         amp % Output amplifier
     end
     
@@ -28,7 +25,7 @@ classdef LinearEquivalentImage < edu.washington.riekelab.protocols.RiekeLabStage
             '01192','01769','01829','02265','02281','02733','02999','03093',...
             '03347','03447','03584','03758','03760'})
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
-        saccadeTrajectoryType = symphonyui.core.PropertyType('char', 'row', {'full','jump'})
+        linearIntegrationFunctionType = symphonyui.core.PropertyType('char', 'row', {'gaussian center','uniform'})
         centerOffsetType = symphonyui.core.PropertyType('denserealdouble', 'matrix')
         
         wholeImageMatrix
@@ -57,9 +54,15 @@ classdef LinearEquivalentImage < edu.washington.riekelab.protocols.RiekeLabStage
             
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
-                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis);
+                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
+                'groupBy',{'stimulusTag'});
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
+            if ~strcmp(obj.onlineAnalysis,'none')
+                obj.showFigure('edu.washington.riekelab.turner.figures.ImageVsIntensityFigure',...
+                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
+                'preTime',obj.preTime,'stimTime',obj.stimTime);
+            end
             
             %load appropriate image...
             resourcesDir = 'C:\Users\Max Turner\Documents\GitHub\turner-package\resources\';
@@ -88,17 +91,9 @@ classdef LinearEquivalentImage < edu.washington.riekelab.protocols.RiekeLabStage
             %get equivalent intensity values:
             %   Get the model RF...
             sigmaC = obj.rfSigmaCenter ./ 3.3; %microns -> VH pixels
-            sigmaS = obj.rfSigmaSurround ./ 3.3;
-            weightC = obj.rfWeightCenter;
-            weightS = 1 - weightC; 
-            RFCenter = fspecial('gaussian',2.*[radX radY] + 1,sigmaC);
-            if weightC == 1 %just the center
-                RF = RFCenter;
-            else % difference of gaussians, use center and surround
-                RFSurround = fspecial('gaussian',2.*[radX radY] + 1,sigmaS);
-                RF = weightC.*RFCenter - weightS.*RFSurround;
-            end
-            %   get the mask / aperture to apply to the image...
+            RF = fspecial('gaussian',2.*[radX radY] + 1,sigmaC);
+
+            %   get the aperture to apply to the image...
             %   set to 1 = values to be included (i.e. image is shown there)
             [rr, cc] = meshgrid(1:(2*radX+1),1:(2*radY+1));
             if obj.apertureDiameter > 0
@@ -108,17 +103,13 @@ classdef LinearEquivalentImage < edu.washington.riekelab.protocols.RiekeLabStage
             else
                 apertureMatrix = ones(2.*[radX radY] + 1);
             end
-            if obj.maskDiameter > 0
-                maskMatrix = sqrt((rr-radX).^2 + ...
-                    (cc-radY).^2) > (obj.maskDiameter/2) ./ 3.3;
-                maskMatrix = maskMatrix';
-            else
-                maskMatrix = ones(2.*[radX radY] + 1);
+            if strcmp(obj.linearIntegrationFunction,'gaussian center')
+                weightingFxn = apertureMatrix .* RF; %set to zero mean gray pixels
+            elseif strcmp(obj.linearIntegrationFunction,'uniform')
+                weightingFxn = apertureMatrix;
             end
-            binaryMatrix = min(maskMatrix,apertureMatrix); 
-            weightingFxn = binaryMatrix .* RF; %set to zero mean gray pixels
             weightingFxn = weightingFxn ./ sum(weightingFxn(:)); %sum to one
-
+            
             for ff = 1:obj.noPatches
                 tempPatch = contrastImage(round(obj.patchLocations(1,ff)-radX):round(obj.patchLocations(1,ff)+radX),...
                     round(obj.patchLocations(2,ff)-radY):round(obj.patchLocations(2,ff)+radY));
@@ -126,7 +117,6 @@ classdef LinearEquivalentImage < edu.washington.riekelab.protocols.RiekeLabStage
                 obj.allEquivalentIntensityValues(ff) = obj.backgroundIntensity + ...
                     equivalentContrast * obj.backgroundIntensity;
             end
-            
         end
         
         function prepareEpoch(obj, epoch)
@@ -177,7 +167,6 @@ classdef LinearEquivalentImage < edu.washington.riekelab.protocols.RiekeLabStage
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3);
             p.setBackgroundColor(obj.backgroundIntensity);
             
-            maskDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.maskDiameter);
             apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
             centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
 
@@ -203,7 +192,6 @@ classdef LinearEquivalentImage < edu.washington.riekelab.protocols.RiekeLabStage
                 p.addController(sceneVisible);
             end
             
-            
             if (obj.apertureDiameter > 0) %% Create aperture
                 aperture = stage.builtin.stimuli.Rectangle();
                 aperture.position = canvasSize/2 + centerOffsetPix;
@@ -212,15 +200,6 @@ classdef LinearEquivalentImage < edu.washington.riekelab.protocols.RiekeLabStage
                 mask = stage.core.Mask.createCircularAperture(apertureDiameterPix/max(canvasSize), 1024); %circular aperture
                 aperture.setMask(mask);
                 p.addStimulus(aperture); %add aperture
-            end
-            
-            if (obj.maskDiameter > 0) % Create mask
-                mask = stage.builtin.stimuli.Ellipse();
-                mask.position = canvasSize/2 + centerOffsetPix;
-                mask.color = obj.backgroundIntensity;
-                mask.radiusX = maskDiameterPix/2;
-                mask.radiusY = maskDiameterPix/2;
-                p.addStimulus(mask); %add mask
             end
         end
         
