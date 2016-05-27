@@ -12,9 +12,9 @@ classdef AreaSummationFigure < symphonyui.core.FigureHandler
         lineHandle
         fitLineHandle
         allEpochResponses
+        baselines
         allSpotSizes
         summaryData
-        
     end
     
     methods
@@ -71,17 +71,20 @@ classdef AreaSummationFigure < symphonyui.core.FigureHandler
             epochResponseTrace = response.getData();
             sampleRate = response.sampleRate.quantityInBaseUnits;
             currentSpotSize = epoch.parameters('currentSpotSize');
+            prePts = sampleRate*obj.preTime/1000;
+            stimPts = sampleRate*obj.stimTime/1000;
+            preScaleFactor = stimPts / prePts;
             
             if strcmp(obj.recordingType,'extracellular') %spike recording
-                %take (prePts+1:prePts+stimPts)
-                epochResponseTrace = epochResponseTrace((sampleRate*obj.preTime/1000)+1:(sampleRate*(obj.preTime + obj.stimTime)/1000));
+                epochResponseTrace = epochResponseTrace(1:prePts+stimPts);
                 %count spikes
                 S = spikeDetectorOnline(epochResponseTrace);
-                newEpochResponse = length(S.sp); %spike count
+                newEpochResponse = sum(S.sp > (prePts + stimPts)); %spike count during stim
+                newBaseline = preScaleFactor * sum(S.sp < prePts); %spike count before stim, scaled by length
             else %intracellular - Vclamp
-                epochResponseTrace = epochResponseTrace-mean(epochResponseTrace(1:sampleRate*obj.preTime/1000)); %baseline
+                epochResponseTrace = epochResponseTrace-mean(epochResponseTrace(1:prePts)); %baseline
                 %take (prePts+1:prePts+stimPts)
-                epochResponseTrace = epochResponseTrace((sampleRate*obj.preTime/1000)+1:(sampleRate*(obj.preTime + obj.stimTime)/1000));
+                epochResponseTrace = epochResponseTrace((prePts+1):(prePts+stimPts));
                 %charge transfer
                 if strcmp(obj.recordingType,'exc') %measuring exc
                     chargeMult = -1;
@@ -90,9 +93,25 @@ classdef AreaSummationFigure < symphonyui.core.FigureHandler
                 end
                 newEpochResponse = chargeMult*trapz(epochResponseTrace(1:sampleRate*obj.stimTime/1000)); %pA*datapoint
                 newEpochResponse = newEpochResponse/sampleRate; %pA*sec = pC
+                newBaseline = 0;
             end
+% % %             % % %  % % %  % % %  % % %  % % %  % % %  % % %
+% % %             stimSize = 1000;
+% % %             centerSigma = 40;
+% % %             surroundSigma = 150;
+% % %             RFCenter = fspecial('gaussian',stimSize,centerSigma);
+% % %             RFSurround = fspecial('gaussian',stimSize,surroundSigma);
+% % %             RF = 7.*RFCenter - 3.*RFSurround;
+% % %             [rr, cc] = meshgrid(1:stimSize,1:stimSize);
+% % %             currentStimulus = sqrt((rr-round(stimSize/2)).^2+(cc-round(stimSize/2)).^2)<currentSpotSize/2;
+% % %             newEpochResponse = sum(sum(currentStimulus .* RF)) + 0.5*randn;
+% % %             warning('USING TESTING DATA ON EXPANDING SPOTS')
+% % %              % % %  % % %  % % %  % % %  % % %  % % %  % % %  % % % 
+            
+            
             obj.allSpotSizes = cat(1,obj.allSpotSizes,currentSpotSize);
             obj.allEpochResponses = cat(1,obj.allEpochResponses,newEpochResponse);
+            obj.baselines = cat(1,obj.baselines,newBaseline);
             
             obj.summaryData.spotSizes = unique(obj.allSpotSizes);
             obj.summaryData.meanResponses = zeros(size(obj.summaryData.spotSizes));
@@ -115,15 +134,12 @@ classdef AreaSummationFigure < symphonyui.core.FigureHandler
     methods (Access = private)
         
         function onSelectedFitGaussian(obj, ~, ~)
-            if strcmp(obj.recordingType,'extracellular')
-                R0upperBound = Inf;
-            else
-                R0upperBound = 1e-6; %analog signals already baseline subtracted. Curve goes through [0,0]
-            end
-            params0 = [0.35,100,0]; % [kC, sigmaC, R0]
-            fitRes = fitGaussianRFAreaSummation(obj.summaryData.spotSizes,obj.summaryData.meanResponses,params0,R0upperBound);
+            params0 = [3,120];
+            [Kc, sigmaC] = ...
+                fitGaussianRFAreaSummation(obj.summaryData.spotSizes,obj.summaryData.meanResponses,params0);
             fitX = 0:(1.1*max(obj.summaryData.spotSizes));
-            fitY = GaussianRFAreaSummation(fitX,fitRes.Kc,fitRes.sigmaC,fitRes.R0);
+            fitY = GaussianRFAreaSummation([Kc sigmaC],fitX);
+
             if isempty(obj.fitLineHandle)
                 obj.fitLineHandle = line(fitX, fitY, 'Parent', obj.axesHandle);
             else
@@ -131,21 +147,18 @@ classdef AreaSummationFigure < symphonyui.core.FigureHandler
                     'YData', fitY);
             end
             set(obj.fitLineHandle,'Color',[1 0 0],'LineWidth',2,'Marker','none');
-            str = {['SigmaC = ',num2str(fitRes.sigmaC)]};
+            str = {['SigmaC = ',num2str(sigmaC)]};
             title(obj.axesHandle,str);
             
         end
         
         function onSelectedFitDoG(obj, ~, ~)
-             if strcmp(obj.recordingType,'extracellular')
-                R0upperBound = Inf;
-            else
-                R0upperBound = 1e-6; %analog signals already baseline subtracted. Curve goes through [0,0]
-            end
-            params0 = [0.35,35,0.08,300,0];
-            fitRes = fitDoGAreaSummation(obj.summaryData.spotSizes,obj.summaryData.meanResponses,params0,R0upperBound);
+            params0 = [0.5,50, 0.5, 150];
+            [Kc, sigmaC, Ks, sigmaS] = ...
+                fitDoGAreaSummation(obj.summaryData.spotSizes,obj.summaryData.meanResponses,params0);
             fitX = 0:(1.1*max(obj.summaryData.spotSizes));
-            fitY = DoGAreaSummation(fitX,fitRes.Kc,fitRes.sigmaC,fitRes.Ks,fitRes.sigmaS,fitRes.R0);
+            fitY = DoGAreaSummation([Kc sigmaC Ks sigmaS], fitX);
+            
             if isempty(obj.fitLineHandle)
                 obj.fitLineHandle = line(fitX, fitY, 'Parent', obj.axesHandle);
             else
@@ -153,8 +166,8 @@ classdef AreaSummationFigure < symphonyui.core.FigureHandler
                     'YData', fitY);
             end
             set(obj.fitLineHandle,'Color',[1 0 0],'LineWidth',2,'Marker','none');
-            tempKc = fitRes.Kc / (fitRes.Kc + fitRes.Ks);
-            str = {['SigmaC = ',num2str(fitRes.sigmaC)],['sigmaS = ',num2str(fitRes.sigmaS)],...
+            tempKc = Kc / (Kc + Ks);
+            str = {['SigmaC = ',num2str(sigmaC)],['sigmaS = ',num2str(sigmaS)],...
             ['Kc = ',num2str(tempKc)]};
             title(obj.axesHandle,str);
         end
