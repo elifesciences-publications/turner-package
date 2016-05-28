@@ -36,7 +36,7 @@ classdef AreaSummationFigure < symphonyui.core.FigureHandler
         
         function createUi(obj)
             import appbox.*;
-            iconDir = 'C:\Users\Max Turner\Documents\GitHub\turner-package\resources\icons\';
+            iconDir = 'C:\Users\Max Turner\Documents\GitHub\turner-package\utils\icons\';
             toolbar = findall(obj.figureHandle, 'Type', 'uitoolbar');
             fitGaussianButton = uipushtool( ...
                 'Parent', toolbar, ...

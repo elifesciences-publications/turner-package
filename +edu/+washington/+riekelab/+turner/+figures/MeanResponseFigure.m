@@ -22,7 +22,7 @@ classdef MeanResponseFigure < symphonyui.core.FigureHandler
 
             ip = inputParser();
             ip.addParameter('groupBy', [], @(x)iscellstr(x));
-            ip.addParameter('sweepColor', co(1,:), @(x)ischar(x) || isvector(x));
+            ip.addParameter('sweepColor', co(1,:), @(x)ischar(x) || ismatrix(x));
             ip.addParameter('storedSweepColor', 'r', @(x)ischar(x) || isvector(x));
             ip.addParameter('recordingType', [], @(x)ischar(x));
             ip.parse(varargin{:});
@@ -38,7 +38,7 @@ classdef MeanResponseFigure < symphonyui.core.FigureHandler
         
         function createUi(obj)
             import appbox.*;
-            iconDir = 'C:\Users\Max Turner\Documents\GitHub\turner-package\resources\icons\';
+            iconDir = 'C:\Users\Max Turner\Documents\GitHub\turner-package\utils\icons\';
             toolbar = findall(obj.figureHandle, 'Type', 'uitoolbar');
             storeSweepButton = uipushtool( ...
                 'Parent', toolbar, ...
@@ -127,7 +127,16 @@ classdef MeanResponseFigure < symphonyui.core.FigureHandler
             end
             
             if isempty(obj.sweepIndex)
-                sweep.line = line(x, y, 'Parent', obj.axesHandle, 'Color', obj.sweepColor);
+                if size(obj.sweepColor,1) == 1
+                    cInd = 1;
+                elseif size(obj.sweepColor,1) >= length(obj.sweeps)+1
+                    cInd = length(obj.sweeps)+1;
+                else
+                    cInd = 1;
+                    warning('Not enough colors supplied for sweeps')
+                end
+                sweep.line = line(x, y, 'Parent', obj.axesHandle,...
+                    'Color', obj.sweepColor(cInd,:));
                 sweep.parameters = parameters;
                 sweep.count = 1;
                 obj.sweeps{end + 1} = sweep;

@@ -34,10 +34,12 @@ classdef ExpandingSpots < edu.washington.riekelab.protocols.RiekeLabStageProtoco
         
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
-            
+            colors = pmkmp(length(obj.spotSizes),'CubicYF');
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
-                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,'groupBy',{'currentSpotSize'});
+                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
+                'groupBy',{'currentSpotSize'},...
+                'sweepColor',colors);
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
             if ~strcmp(obj.onlineAnalysis,'none')
