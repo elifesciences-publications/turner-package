@@ -65,7 +65,7 @@ classdef LinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabStageP
             end
             
             %load appropriate image...
-            resourcesDir = 'C:\Users\Max Turner\Documents\GitHub\turner-package\resources\';
+            resourcesDir = 'C:\Users\Public\Documents\turner-package\resources\';
             obj.currentStimSet = '/VHsubsample_20160105';
             fileId=fopen([resourcesDir, obj.currentStimSet, '/imk', obj.imageName,'.iml'],'rb','ieee-be');
             img = fread(fileId, [1536,1024], 'uint16');

@@ -49,7 +49,7 @@ classdef NatImageDynamicClamp < edu.washington.riekelab.protocols.RiekeLabProtoc
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.protocols.RiekeLabProtocol(obj);
             
-            obj.resourcesDir = 'C:\Users\Max Turner\Documents\GitHub\turner-package\resources\gClampStims\NIFgClampTraces\';
+            obj.resourcesDir = 'C:\Users\Public\Documents\turner-package\resources\gClampStims\NIFgClampTraces\';
             fileID = [obj.ConductanceSet,'.mat'];
             load(fullfile(obj.resourcesDir, fileID));   
             obj.imageSequence = res.imageIndex;

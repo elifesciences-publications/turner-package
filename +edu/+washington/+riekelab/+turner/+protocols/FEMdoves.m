@@ -44,7 +44,7 @@ classdef FEMdoves < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             
             %load eye movement stimulus data
             %Change to resources directory
-            resourcesDir = 'C:\Users\Max Turner\Documents\GitHub\turner-package\resources\';
+            resourcesDir = 'C:\Users\Public\Documents\turner-package\resources\';
             obj.currentStimSet = 'dovesFEMstims_20160422.mat';
             load([resourcesDir, obj.currentStimSet]);
             imageName = FEMdata(obj.stimulusIndex).ImageName;
