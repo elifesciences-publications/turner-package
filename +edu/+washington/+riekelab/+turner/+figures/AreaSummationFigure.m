@@ -36,7 +36,7 @@ classdef AreaSummationFigure < symphonyui.core.FigureHandler
         
         function createUi(obj)
             import appbox.*;
-            iconDir = 'C:\Users\Max Turner\Documents\GitHub\turner-package\utils\icons\';
+            iconDir = 'C:\Users\Public\Documents\turner-package\utils\icons\';
             toolbar = findall(obj.figureHandle, 'Type', 'uitoolbar');
             fitGaussianButton = uipushtool( ...
                 'Parent', toolbar, ...
@@ -79,7 +79,7 @@ classdef AreaSummationFigure < symphonyui.core.FigureHandler
                 epochResponseTrace = epochResponseTrace(1:prePts+stimPts);
                 %count spikes
                 S = spikeDetectorOnline(epochResponseTrace);
-                newEpochResponse = sum(S.sp > (prePts + stimPts)); %spike count during stim
+                newEpochResponse = sum(S.sp > prePts); %spike count during stim
                 newBaseline = preScaleFactor * sum(S.sp < prePts); %spike count before stim, scaled by length
             else %intracellular - Vclamp
                 epochResponseTrace = epochResponseTrace-mean(epochResponseTrace(1:prePts)); %baseline
@@ -134,7 +134,7 @@ classdef AreaSummationFigure < symphonyui.core.FigureHandler
     methods (Access = private)
         
         function onSelectedFitGaussian(obj, ~, ~)
-            params0 = [3,120];
+            params0 = [max(obj.summaryData.meanResponses) / 2, 50];
             [Kc, sigmaC] = ...
                 fitGaussianRFAreaSummation(obj.summaryData.spotSizes,obj.summaryData.meanResponses,params0);
             fitX = 0:(1.1*max(obj.summaryData.spotSizes));
@@ -153,7 +153,8 @@ classdef AreaSummationFigure < symphonyui.core.FigureHandler
         end
         
         function onSelectedFitDoG(obj, ~, ~)
-            params0 = [0.5,50, 0.5, 150];
+            params0 = [max(obj.summaryData.meanResponses) / 2,50,...
+                max(obj.summaryData.meanResponses) / 2, 150];
             [Kc, sigmaC, Ks, sigmaS] = ...
                 fitDoGAreaSummation(obj.summaryData.spotSizes,obj.summaryData.meanResponses,params0);
             fitX = 0:(1.1*max(obj.summaryData.spotSizes));
