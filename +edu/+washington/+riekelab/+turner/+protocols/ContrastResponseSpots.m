@@ -37,7 +37,11 @@ classdef ContrastResponseSpots < edu.washington.riekelab.protocols.RiekeLabStage
          
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
-            colors = pmkmp(length(obj.spotContrast),'CubicYF');
+            if length(obj.spotContrast) > 1
+                colors = pmkmp(length(obj.spotContrast),'CubicYF');
+            else
+                colors = [0 0 0];
+            end
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...

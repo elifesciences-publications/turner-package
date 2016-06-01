@@ -2,9 +2,9 @@ classdef SinePlusImage < edu.washington.riekelab.protocols.RiekeLabStageProtocol
     
     properties
         preTime = 250 % ms
-        stimTime = 3000 % ms
+        stimTime = 8000 % ms
         tailTime = 250 % ms
-        contrast = 0.75 % relative to mean (0-1)
+        contrast = 0.9 % relative to mean (0-1)
         temporalFrequency = 2 % Hz
         spotDiameter = 200; % um
         
