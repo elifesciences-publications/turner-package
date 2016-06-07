@@ -40,10 +40,10 @@ classdef ContrastF1F2 < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
-            
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
-                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis);
+                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
+                'groupBy',{'currentContrast','currentPhase'});
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
             
