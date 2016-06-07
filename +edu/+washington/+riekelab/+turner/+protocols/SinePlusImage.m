@@ -12,12 +12,11 @@ classdef SinePlusImage < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         annulusInnerDiameter = 250 % um
         annulusOuterDiameter = 600 % um
         imageName = '00152' %van hateren image names
-        seed = 1 % rand seed for picking image patches
-        noPatches = 20 %number of different image patches to show
+        seed = 1 % rand seed for picking image patch
 
         centerOffset = [0, 0] % [x,y] (um)
         onlineAnalysis = 'none'
-        numberOfAverages = uint16(180) % number of epochs to queue
+        numberOfAverages = uint16(9) % number of epochs to queue
         amp % Output amplifier
     end
     
@@ -31,15 +30,13 @@ classdef SinePlusImage < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         
         wholeImageMatrix
         imagePatchMatrix
-        patchLocations
+        patchLocation
         phases
         
         %saved out to each epoch...
         currentStimSet
         backgroundIntensity
-        imagePatchIndex
         currentPhase
-        currentPatchLocation
     end
        
     properties (Hidden, Transient)
@@ -55,7 +52,7 @@ classdef SinePlusImage < edu.washington.riekelab.protocols.RiekeLabStageProtocol
 
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
-            colors = [0,0,0 ; pmkmp(8,'CubicYF')];
+            colors = [0,0,0 ; edu.washington.riekelab.turner.utils.pmkmp(8,'CubicYF')];
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
@@ -89,13 +86,13 @@ classdef SinePlusImage < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             stimSize_VHpix = stimSize ./ (3.3); %um / (um/pixel) -> pixel
             radX = round(stimSize_VHpix(1) / 2); %boundaries for fixation draws depend on stimulus size
             radY = round(stimSize_VHpix(2) / 2);
-            %get patch locations:
-            obj.patchLocations(1,1:obj.noPatches) = randsample((radX + 1):(1536 - radX),obj.noPatches); %in VH pixels
-            obj.patchLocations(2,1:obj.noPatches) = randsample((radY + 1):(1024 - radY),obj.noPatches);
+            %get patch location for this run:
+            obj.patchLocation(1) = randsample((radX + 1):(1536 - radX),1); %in VH pixels
+            obj.patchLocation(2) = randsample((radY + 1):(1024 - radY),1);
             
             %start with no image flash, just sinusoid
-            %phase 100 never happens in createPresentation fxn
-            obj.phases = [100, 0:pi/4:7*pi/4];
+            %phase NaN never happens in createPresentation fxn
+            obj.phases = [NaN, 0:pi/4:7*pi/4];
         end
 
         function prepareEpoch(obj, epoch)
@@ -109,42 +106,25 @@ classdef SinePlusImage < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             %determine phase to use
             ind = mod(obj.numEpochsCompleted, length(obj.phases)) + 1;
             obj.currentPhase = obj.phases(ind);
-            %determine image patch to use
-            if (obj.currentPhase == 100) %get new image patch
-                if obj.numEpochsCompleted == 0
-                    obj.imagePatchIndex = 1;
-                else
-                    newIndex = obj.imagePatchIndex + 1;
-                    if newIndex > obj.noPatches
-                        newIndex = 1; %cycled through, start again
-                    end
-                    obj.imagePatchIndex = newIndex;
-                end
-                %get the image patch:
-                obj.currentPatchLocation(1) = obj.patchLocations(1,obj.imagePatchIndex); %in VH pixels
-                obj.currentPatchLocation(2) = obj.patchLocations(2,obj.imagePatchIndex);
-                %imagePatchMatrix is in VH pixels
-                %size of the stimulus on the prep:
-                stimSize = obj.rig.getDevice('Stage').getCanvasSize() .* ...
-                    obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'); %um
-                stimSize_VHpix = stimSize ./ (3.3); %um / (um/pixel) -> pixel
-                radX = stimSize_VHpix(1) / 2; %boundaries for fixation draws depend on stimulus size
-                radY = stimSize_VHpix(2) / 2;
-                obj.imagePatchMatrix = obj.wholeImageMatrix(round(obj.currentPatchLocation(1)-radX):round(obj.currentPatchLocation(1)+radX),...
-                    round(obj.currentPatchLocation(2)-radY):round(obj.currentPatchLocation(2)+radY));
-                obj.imagePatchMatrix = obj.imagePatchMatrix';
-                
-            else
-                %use last image patch
-            end
+            
+            %imagePatchMatrix is in VH pixels
+            %size of the stimulus on the prep:
+            stimSize = obj.rig.getDevice('Stage').getCanvasSize() .* ...
+                obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'); %um
+            stimSize_VHpix = stimSize ./ (3.3); %um / (um/pixel) -> pixel
+            radX = stimSize_VHpix(1) / 2; %boundaries for fixation draws depend on stimulus size
+            radY = stimSize_VHpix(2) / 2;
+            obj.imagePatchMatrix = obj.wholeImageMatrix(round(obj.patchLocation(1)-radX):round(obj.patchLocation(1)+radX),...
+                round(obj.patchLocation(2)-radY):round(obj.patchLocation(2)+radY));
+            obj.imagePatchMatrix = obj.imagePatchMatrix';
+
 % %             figure(30); clf;
 % %             imagesc(obj.imagePatchMatrix); colormap(gray); axis image; axis equal;
             
             epoch.addParameter('currentPhase', obj.currentPhase);
             epoch.addParameter('currentStimSet', obj.currentStimSet);
             epoch.addParameter('backgroundIntensity', obj.backgroundIntensity);
-            epoch.addParameter('imagePatchIndex', obj.imagePatchIndex);
-            epoch.addParameter('currentPatchLocation', obj.currentPatchLocation);
+            epoch.addParameter('patchLocation', obj.patchLocation);
         end
         
         function p = createPresentation(obj)
