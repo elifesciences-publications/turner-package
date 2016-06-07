@@ -117,8 +117,8 @@ classdef NatImageDynamicClamp < edu.washington.riekelab.protocols.RiekeLabProtoc
             
             %get iClamp spikes
             threshold = -20; %mV - hardcoded for now, could be param?
-            spikesUp=getThresCross(Vdata,threshold,1);
-            spikesDown=getThresCross(Vdata,threshold,-1);
+            spikesUp=edu.washington.riekelab.turner.utils.getThresCross(Vdata,threshold,1);
+            spikesDown=edu.washington.riekelab.turner.utils.getThresCross(Vdata,threshold,-1);
             newSpikeCount = length(spikesUp(spikesUp>res.stimStart & spikesUp<res.stimEnd));
 
             if strcmp(obj.currentConductanceStim.exc,'Image')

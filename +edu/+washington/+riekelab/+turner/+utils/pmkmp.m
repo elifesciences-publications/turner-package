@@ -261,8 +261,8 @@ function map=pmkmp(n,scheme)
 
 
 % error checking, defaults, valid schemes
-error(nargchk(0,2,nargin))
-error(nargoutchk(0,1,nargout))
+narginchk(0,2)
+nargoutchk(0,1)
 
 if nargin<2
   scheme = 'CubicYF';

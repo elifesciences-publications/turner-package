@@ -35,7 +35,7 @@ classdef ExpandingSpots < edu.washington.riekelab.protocols.RiekeLabStageProtoco
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
             if length(obj.spotSizes) > 1
-                colors = pmkmp(length(obj.spotSizes),'CubicYF');
+                colors = edu.washington.riekelab.turner.utils.pmkmp(length(obj.spotSizes),'CubicYF');
             else
                 colors = [0 0 0];
             end

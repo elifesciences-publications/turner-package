@@ -38,7 +38,7 @@ classdef ContrastResponseSpots < edu.washington.riekelab.protocols.RiekeLabStage
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
             if length(obj.spotContrast) > 1
-                colors = pmkmp(length(obj.spotContrast),'CubicYF');
+                colors = edu.washington.riekelab.turner.utils.pmkmp(length(obj.spotContrast),'CubicYF');
             else
                 colors = [0 0 0];
             end
@@ -79,7 +79,7 @@ classdef ContrastResponseSpots < edu.washington.riekelab.protocols.RiekeLabStage
             
             if strcmp(obj.onlineAnalysis,'extracellular') %spike recording
                 %count spikes
-                S = spikeDetectorOnline(epochResponseTrace);
+                S = edu.washington.riekelab.turner.utils.spikeDetectorOnline(epochResponseTrace);
                 prePts = sampleRate*obj.preTime/1e3;
                 stimPts = sampleRate*obj.stimTime/1e3;
                 S.sp(S.sp < prePts) = [];

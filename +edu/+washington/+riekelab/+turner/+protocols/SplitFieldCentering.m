@@ -76,7 +76,7 @@ classdef SplitFieldCentering < edu.washington.riekelab.protocols.RiekeLabStagePr
             if strcmp(obj.onlineAnalysis,'extracellular') %spike recording
                 filterSigma = (20/1000)*sampleRate; %msec -> dataPts
                 newFilt = normpdf(1:10*filterSigma,10*filterSigma/2,filterSigma);
-                res = spikeDetectorOnline(quantities,[],sampleRate);
+                res = edu.washington.riekelab.turner.utils.spikeDetectorOnline(quantities,[],sampleRate);
                 epochResponseTrace = zeros(size(quantities));
                 epochResponseTrace(res.sp) = 1; %spike binary
                 epochResponseTrace = sampleRate*conv(epochResponseTrace,newFilt,'same'); %inst firing rate

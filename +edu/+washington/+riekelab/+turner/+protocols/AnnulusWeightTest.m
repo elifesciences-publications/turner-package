@@ -14,7 +14,7 @@ classdef AnnulusWeightTest < edu.washington.riekelab.protocols.RiekeLabStageProt
         backgroundIntensity = 0.5       % Background light intensity (0-1)
         centerOffset = [0, 0]           % center offset (um)
         onlineAnalysis = 'none'
-        numberOfAverages = uint16(1)    % Number of epochs
+        numberOfAverages = uint16(10)    % Number of epochs
         amp                             % Output amplifier
     end
     
@@ -60,7 +60,7 @@ classdef AnnulusWeightTest < edu.washington.riekelab.protocols.RiekeLabStageProt
             
             testActivations = cumsum(testWts);
             targetActivation = sum(targetWts);
-            distanceInMicrons = getThresCross(testActivations,targetActivation,1);
+            distanceInMicrons = edu.washington.riekelab.turner.utils.getThresCross(testActivations,targetActivation,1);
 
             if isempty(distanceInMicrons)
                 error('Cannot find equivalent annulus, make reference stimulus smaller')

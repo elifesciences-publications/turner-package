@@ -62,7 +62,7 @@ classdef ImageVsIntensityFigure < symphonyui.core.FigureHandler
                 %take (prePts+1:prePts+stimPts)
                 epochResponseTrace = epochResponseTrace((sampleRate*obj.preTime/1000)+1:(sampleRate*(obj.preTime + obj.stimTime)/1000));
                 %count spikes
-                S = spikeDetectorOnline(epochResponseTrace);
+                S = edu.washington.riekelab.turner.utils.spikeDetectorOnline(epochResponseTrace);
                 newEpochResponse = length(S.sp); %spike count
             else %intracellular - Vclamp
                 epochResponseTrace = epochResponseTrace-mean(epochResponseTrace(1:sampleRate*obj.preTime/1000)); %baseline

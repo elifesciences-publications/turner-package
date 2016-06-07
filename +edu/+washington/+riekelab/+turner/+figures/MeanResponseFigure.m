@@ -38,7 +38,7 @@ classdef MeanResponseFigure < symphonyui.core.FigureHandler
         
         function createUi(obj)
             import appbox.*;
-            iconDir = 'C:\Users\Public\Documents\turner-package\utils\icons\';
+            iconDir = [fileparts(fileparts(mfilename('fullpath'))), '\+utils\+icons\'];
             toolbar = findall(obj.figureHandle, 'Type', 'uitoolbar');
             storeSweepButton = uipushtool( ...
                 'Parent', toolbar, ...
@@ -89,7 +89,7 @@ classdef MeanResponseFigure < symphonyui.core.FigureHandler
                 if strcmp(obj.recordingType,'extracellular')
                     filterSigma = (15/1000)*sampleRate; %15 msec -> dataPts
                     newFilt = normpdf(1:10*filterSigma,10*filterSigma/2,filterSigma);
-                    res = spikeDetectorOnline(y,[],sampleRate);
+                    res = edu.washington.riekelab.turner.utils.spikeDetectorOnline(y,[],sampleRate);
                     y = zeros(size(y));
                     y(res.sp) = 1; %spike binary
                     y = sampleRate*conv(y,newFilt,'same'); %inst firing rate, Hz

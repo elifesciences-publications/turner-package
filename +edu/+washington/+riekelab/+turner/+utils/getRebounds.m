@@ -7,10 +7,10 @@ r = zeros(size(peaks));
 
 for i=1:length(peaks)
    endPoint = min(peaks_ind(i)+searchInterval,length(trace));
-   nextMin = getPeaks(trace(peaks_ind(i):endPoint),-1);
+   nextMin = edu.washington.riekelab.turner.utils.getPeaks(trace(peaks_ind(i):endPoint),-1);
    if isempty(nextMin), nextMin = peaks(i); 
    else nextMin = nextMin(1); end
-   nextMax = getPeaks(trace(peaks_ind(i):endPoint),1);
+   nextMax = edu.washington.riekelab.turner.utils.getPeaks(trace(peaks_ind(i):endPoint),1);
    if isempty(nextMax), nextMax = 0; 
    else nextMax = nextMax(1); end
    

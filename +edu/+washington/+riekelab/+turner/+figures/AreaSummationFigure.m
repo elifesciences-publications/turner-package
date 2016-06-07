@@ -36,7 +36,7 @@ classdef AreaSummationFigure < symphonyui.core.FigureHandler
         
         function createUi(obj)
             import appbox.*;
-            iconDir = 'C:\Users\Public\Documents\turner-package\utils\icons\';
+            iconDir = [fileparts(fileparts(mfilename('fullpath'))), '\+utils\+icons\'];
             toolbar = findall(obj.figureHandle, 'Type', 'uitoolbar');
             fitGaussianButton = uipushtool( ...
                 'Parent', toolbar, ...
@@ -78,7 +78,7 @@ classdef AreaSummationFigure < symphonyui.core.FigureHandler
             if strcmp(obj.recordingType,'extracellular') %spike recording
                 epochResponseTrace = epochResponseTrace(1:prePts+stimPts);
                 %count spikes
-                S = spikeDetectorOnline(epochResponseTrace);
+                S = edu.washington.riekelab.turner.utils.spikeDetectorOnline(epochResponseTrace);
                 newEpochResponse = sum(S.sp > prePts); %spike count during stim
                 newBaseline = preScaleFactor * sum(S.sp < prePts); %spike count before stim, scaled by length
             else %intracellular - Vclamp
@@ -95,20 +95,7 @@ classdef AreaSummationFigure < symphonyui.core.FigureHandler
                 newEpochResponse = newEpochResponse/sampleRate; %pA*sec = pC
                 newBaseline = 0;
             end
-% % %             % % %  % % %  % % %  % % %  % % %  % % %  % % %
-% % %             stimSize = 1000;
-% % %             centerSigma = 40;
-% % %             surroundSigma = 150;
-% % %             RFCenter = fspecial('gaussian',stimSize,centerSigma);
-% % %             RFSurround = fspecial('gaussian',stimSize,surroundSigma);
-% % %             RF = 7.*RFCenter - 3.*RFSurround;
-% % %             [rr, cc] = meshgrid(1:stimSize,1:stimSize);
-% % %             currentStimulus = sqrt((rr-round(stimSize/2)).^2+(cc-round(stimSize/2)).^2)<currentSpotSize/2;
-% % %             newEpochResponse = sum(sum(currentStimulus .* RF)) + 0.5*randn;
-% % %             warning('USING TESTING DATA ON EXPANDING SPOTS')
-% % %              % % %  % % %  % % %  % % %  % % %  % % %  % % %  % % % 
-            
-            
+
             obj.allSpotSizes = cat(1,obj.allSpotSizes,currentSpotSize);
             obj.allEpochResponses = cat(1,obj.allEpochResponses,newEpochResponse);
             obj.baselines = cat(1,obj.baselines,newBaseline);
@@ -136,9 +123,9 @@ classdef AreaSummationFigure < symphonyui.core.FigureHandler
         function onSelectedFitGaussian(obj, ~, ~)
             params0 = [max(obj.summaryData.meanResponses) / 2, 50];
             [Kc, sigmaC] = ...
-                fitGaussianRFAreaSummation(obj.summaryData.spotSizes,obj.summaryData.meanResponses,params0);
+                edu.washington.riekelab.turner.utils.fitGaussianRFAreaSummation(obj.summaryData.spotSizes,obj.summaryData.meanResponses,params0);
             fitX = 0:(1.1*max(obj.summaryData.spotSizes));
-            fitY = GaussianRFAreaSummation([Kc sigmaC],fitX);
+            fitY = edu.washington.riekelab.turner.utils.GaussianRFAreaSummation([Kc sigmaC],fitX);
 
             if isempty(obj.fitLineHandle)
                 obj.fitLineHandle = line(fitX, fitY, 'Parent', obj.axesHandle);
@@ -156,9 +143,9 @@ classdef AreaSummationFigure < symphonyui.core.FigureHandler
             params0 = [max(obj.summaryData.meanResponses) / 2,50,...
                 max(obj.summaryData.meanResponses) / 2, 150];
             [Kc, sigmaC, Ks, sigmaS] = ...
-                fitDoGAreaSummation(obj.summaryData.spotSizes,obj.summaryData.meanResponses,params0);
+                edu.washington.riekelab.turner.utils.fitDoGAreaSummation(obj.summaryData.spotSizes,obj.summaryData.meanResponses,params0);
             fitX = 0:(1.1*max(obj.summaryData.spotSizes));
-            fitY = DoGAreaSummation([Kc sigmaC Ks sigmaS], fitX);
+            fitY = edu.washington.riekelab.turner.utils.DoGAreaSummation([Kc sigmaC Ks sigmaS], fitX);
             
             if isempty(obj.fitLineHandle)
                 obj.fitLineHandle = line(fitX, fitY, 'Parent', obj.axesHandle);

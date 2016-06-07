@@ -39,7 +39,7 @@ classdef ContrastReversingGrating < edu.washington.riekelab.protocols.RiekeLabSt
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
             if length(obj.barWidth) > 1
-                colors = pmkmp(length(obj.barWidth),'CubicYF');
+                colors = edu.washington.riekelab.turner.utils.pmkmp(length(obj.barWidth),'CubicYF');
             else
                 colors = [0 0 0];
             end
@@ -85,7 +85,7 @@ classdef ContrastReversingGrating < edu.washington.riekelab.protocols.RiekeLabSt
                 %take (prePts+1:prePts+stimPts)
                 epochResponseTrace = epochResponseTrace((sampleRate*obj.preTime/1000)+1:(sampleRate*(obj.preTime + obj.stimTime)/1000));
                 %count spikes
-                S = spikeDetectorOnline(epochResponseTrace);
+                S = edu.washington.riekelab.turner.utils.spikeDetectorOnline(epochResponseTrace);
                 epochResponseTrace = zeros(size(epochResponseTrace));
                 epochResponseTrace(S.sp) = 1; %spike binary
                 
