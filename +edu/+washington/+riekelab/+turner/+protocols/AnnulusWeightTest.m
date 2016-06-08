@@ -4,13 +4,12 @@ classdef AnnulusWeightTest < edu.washington.riekelab.protocols.RiekeLabStageProt
         preTime = 200                   % (ms)
         stimTime = 200                 % (ms)
         tailTime = 200                  % (ms)
+        centerIntensity = 0.75;
+        centerDiameter = 150 % (um)
         referenceInnerDiameter = 250 % (um)
         referenceOuterDiameter = 300 % (um)
         rfSigmaSurround = 180 % (um)
-        
         annulusIntensity = 1.0             % (0-1)
-        centerIntensity = 0.75;
-        centerDiameter = 150 % (um)
         backgroundIntensity = 0.5       % Background light intensity (0-1)
         centerOffset = [0, 0]           % center offset (um)
         onlineAnalysis = 'none'
@@ -37,42 +36,59 @@ classdef AnnulusWeightTest < edu.washington.riekelab.protocols.RiekeLabStageProt
         
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
-            
+            colors = edu.washington.riekelab.turner.utils.pmkmp(2,'CubicYF');
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
-                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,'groupBy',{'currentStimulusType'});
+                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
+                'groupBy',{'currentStimulusType'},'sweepColor',colors);
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
-            
+            if (obj.centerDiameter > obj.referenceInnerDiameter)
+                warndlg('Center spot occludes reference annulus (centerDiameter > referenceInnerDiameter)')
+            end
             %use the input RF to calculate the size of the
             %annulus that should drive an equal response to the reference
             %stimulus
             sigmaS = obj.rfSigmaSurround;
-            startPoint = obj.referenceOuterDiameter / 2; %start at the edge of the reference stim
-            micronsPerPixel = obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel');
-            endOfSearch = round(0.5 * min(obj.rig.getDevice('Stage').getCanvasSize()).*micronsPerPixel); %um
-            targetStartPoint = round(obj.referenceInnerDiameter / 2);
-            targetEndPoint = round(obj.referenceOuterDiameter / 2);
-
-            targetWts = exp(-((targetStartPoint:targetEndPoint)./(2*sigmaS)).^2);
-            testWts = exp(-((startPoint:endOfSearch)./(2*sigmaS)).^2);
-            dispWts = exp(-((0:4*sigmaS)./(2*sigmaS)).^2);
+            %activation of the surround from the reference stimulus:
+            targetActivation = edu.washington.riekelab.turner.utils.GaussianRFAreaSummation([1 sigmaS],...
+                obj.referenceOuterDiameter) - ...
+                edu.washington.riekelab.turner.utils.GaussianRFAreaSummation([1 sigmaS],...
+                obj.referenceInnerDiameter);
             
-            testActivations = cumsum(testWts);
-            targetActivation = sum(targetWts);
-            distanceInMicrons = edu.washington.riekelab.turner.utils.getThresCross(testActivations,targetActivation,1);
-
-            if isempty(distanceInMicrons)
-                error('Cannot find equivalent annulus, make reference stimulus smaller')
-            else
-                obj.testInnerDiameter = 2*startPoint;
-                obj.testOuterDiameter = 2*(startPoint + distanceInMicrons);
+            startPoint = obj.referenceOuterDiameter; %start at the edge of the reference stim
+            micronsPerPixel = obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel');
+            endOfSearch = round(min(obj.rig.getDevice('Stage').getCanvasSize()).*micronsPerPixel); %um
+            obj.testInnerDiameter = startPoint;
+            obj.testOuterDiameter = [];
+            testVector = startPoint:endOfSearch;
+            for ii = 1:length(testVector)
+                testActivation = edu.washington.riekelab.turner.utils.GaussianRFAreaSummation([1 sigmaS],...
+                testVector(ii)) - ...
+                edu.washington.riekelab.turner.utils.GaussianRFAreaSummation([1 sigmaS],...
+                startPoint);
+                if testActivation > targetActivation
+                   obj.testOuterDiameter = testVector(ii);
+                   break 
+                end
             end
-            figure(30); clf; plot(dispWts,'k');
+            if isempty(obj.testOuterDiameter)
+                error('Cannot find equivalent annulus, make reference stimulus smaller')
+            end
+
+            figure(30); clf;
+            refYY = edu.washington.riekelab.turner.utils.GaussianRFAreaSummation([1 sigmaS],...
+                obj.referenceInnerDiameter:obj.referenceOuterDiameter) - ...
+                edu.washington.riekelab.turner.utils.GaussianRFAreaSummation([1 sigmaS],obj.referenceInnerDiameter);
+            testYY = edu.washington.riekelab.turner.utils.GaussianRFAreaSummation([1 sigmaS],...
+                obj.referenceOuterDiameter:obj.testOuterDiameter) - ...
+                edu.washington.riekelab.turner.utils.GaussianRFAreaSummation([1 sigmaS],obj.referenceOuterDiameter);
             hold on;
-            area(targetStartPoint:targetEndPoint,dispWts(targetStartPoint:targetEndPoint),'FaceColor','g')
-            startPoint = round(startPoint); endPoint = round(startPoint + distanceInMicrons);
-            area(startPoint:endPoint,dispWts(startPoint:endPoint),'FaceColor','r')
+            plot(refYY,'g')
+            plot(testYY,'r')
+            legend('Reference','Test')
+            xlabel('Annulus width (microns)'); ylabel('RF activation')
+            grid on
         end
         
         function prepareEpoch(obj, epoch)
