@@ -2,8 +2,8 @@ classdef ContrastResponseSpots < edu.washington.riekelab.protocols.RiekeLabStage
     
     properties
         preTime = 250 % ms
-        stimTime = 500 % ms
-        tailTime = 250
+        stimTime = 250 % ms
+        tailTime = 250 % ms
         spotContrast = [-0.9 -0.75 -0.5 -0.25 -0.125 0.125 0.25 0.5 0.75 0.9] % relative to mean
         spotDiameter = 300 % um
         maskDiameter = 0 % um

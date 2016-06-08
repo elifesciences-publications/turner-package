@@ -2,7 +2,7 @@ classdef ExpandingSpots < edu.washington.riekelab.protocols.RiekeLabStageProtoco
     
     properties
         preTime = 250 % ms
-        stimTime = 500 % ms
+        stimTime = 250 % ms
         tailTime = 250 % ms
         spotIntensity = 1.0 % (0-1)
         spotSizes = [40 80 120 160 180 200 220 240 280 320 460 600] % um
