@@ -33,14 +33,14 @@ classdef FullFieldNoise < edu.washington.riekelab.protocols.RiekeLabStageProtoco
             prepareRun@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
 
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
-            obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
-                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis);
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
             if ~strcmp(obj.onlineAnalysis,'none')
                 obj.showFigure('edu.washington.riekelab.turner.figures.LinearFilterFigure',...
-                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
-                'preTime',obj.preTime,'stimTime',obj.stimTime,'frameDwell',obj.frameDwell);
+                obj.rig.getDevice(obj.amp),obj.rig.getDevice('Frame Monitor'),...
+                'recordingType',obj.onlineAnalysis,...
+                'preTime',obj.preTime,'stimTime',obj.stimTime,...
+                'frameDwell',obj.frameDwell);
             end
         end
         
@@ -87,7 +87,8 @@ classdef FullFieldNoise < edu.washington.riekelab.protocols.RiekeLabStageProtoco
                     intensity = obj.backgroundIntensity;
                 else %in stim frames
                     if mod(frame, obj.frameDwell) == 0 %noise update
-                        intensity = obj.getNextNoiseIntensity();
+                        intensity = obj.backgroundIntensity + ...
+                            obj.noiseStdv * obj.backgroundIntensity * obj.noiseStream.randn;
                     end
                 end
                 i = intensity;
@@ -107,10 +108,6 @@ classdef FullFieldNoise < edu.washington.riekelab.protocols.RiekeLabStageProtoco
             noiseRectVisible = stage.builtin.controllers.PropertyController(noiseRect, 'visible', ...
                 @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
             p.addController(noiseRectVisible);
-        end
-
-        function i = getNextNoiseIntensity(obj)
-            i = obj.backgroundIntensity + obj.noiseStdv * obj.backgroundIntensity * obj.noiseStream.randn;
         end
 
         function tf = shouldContinuePreparingEpochs(obj)
