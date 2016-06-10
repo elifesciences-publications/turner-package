@@ -123,7 +123,6 @@ classdef LinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabStageP
             prepareEpoch@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj, epoch);
 
             %pull patch location and equivalent contrast:
-            obj.imagePatchIndex = mod(obj.numEpochsCompleted, obj.noPatches) + 1;
             obj.imagePatchIndex = floor(mod(obj.numEpochsCompleted/2,obj.noPatches) + 1);
             evenInd = mod(obj.numEpochsCompleted,2);
             if evenInd == 1 %even, show uniform linear equivalent intensity
