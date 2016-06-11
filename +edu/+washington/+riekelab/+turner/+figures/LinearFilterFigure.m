@@ -3,6 +3,7 @@ classdef LinearFilterFigure < symphonyui.core.FigureHandler
     properties (SetAccess = private)
         ampDevice
         frameMonitor
+        stageDevice
         recordingType
         preTime
         stimTime
@@ -25,9 +26,10 @@ classdef LinearFilterFigure < symphonyui.core.FigureHandler
     
     methods
         
-        function obj = LinearFilterFigure(ampDevice, frameMonitor, varargin)
+        function obj = LinearFilterFigure(ampDevice, frameMonitor, stageDevice, varargin)
             obj.ampDevice = ampDevice;
             obj.frameMonitor = frameMonitor;
+            obj.stageDevice = stageDevice;
             ip = inputParser();
             ip.addParameter('recordingType', [], @(x)ischar(x));
             ip.addParameter('preTime', [], @(x)isvector(x));
@@ -48,7 +50,6 @@ classdef LinearFilterFigure < symphonyui.core.FigureHandler
             obj.seedID = ip.Results.seedID;
             obj.figureTitle = ip.Results.figureTitle;
             obj.updatePattern = ip.Results.updatePattern;
-            
 
             obj.allStimuli = [];
             obj.allResponses = [];
@@ -92,7 +93,6 @@ classdef LinearFilterFigure < symphonyui.core.FigureHandler
             obj.epochCount = obj.epochCount + 1;
             tempPattern = mod(obj.epochCount - obj.updatePattern(1),obj.updatePattern(2));
             if obj.epochCount >= obj.updatePattern(1) && tempPattern == 0
-                frameRate = 60;
                 %load amp data
                 response = epoch.getResponse(obj.ampDevice);
                 epochResponseTrace = response.getData();
@@ -113,7 +113,12 @@ classdef LinearFilterFigure < symphonyui.core.FigureHandler
                     newResponse = polarity * epochResponseTrace;
                 end
                 %load frame monitor data
-                lightCrafterFlag = 0;
+                if isa(obj.stageDevice,'edu.washington.riekelab.devices.LightCrafterDevice')
+                    lightCrafterFlag = 1;
+                else %OLED stage device
+                    lightCrafterFlag = 0;
+                end
+                frameRate = obj.stageDevice.getMonitorRefreshRate();
                 FMresponse = epoch.getResponse(obj.frameMonitor);
                 FMdata = FMresponse.getData();
                 frameTimes = edu.washington.riekelab.turner.utils.getFrameTiming(FMdata,lightCrafterFlag);
