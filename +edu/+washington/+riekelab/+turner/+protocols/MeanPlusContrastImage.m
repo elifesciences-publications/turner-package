@@ -147,31 +147,14 @@ classdef MeanPlusContrastImage < edu.washington.riekelab.protocols.RiekeLabStage
             stimSize = obj.rig.getDevice('Stage').getCanvasSize() .* ...
                 obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'); %um
             stimSize_VHpix = stimSize ./ (3.3); %um / (um/pixel) -> pixel
-            radX = stimSize_VHpix(1) / 2; %boundaries for fixation draws depend on stimulus size
-            radY = stimSize_VHpix(2) / 2;
+            radX = round(stimSize_VHpix(1) / 2); %boundaries for fixation draws depend on stimulus size
+            radY = round(stimSize_VHpix(2) / 2);
             obj.imagePatchMatrix = obj.wholeImageMatrix(round(obj.currentPatchLocation(1)-radX):round(obj.currentPatchLocation(1)+radX),...
                 round(obj.currentPatchLocation(2)-radY):round(obj.currentPatchLocation(2)+radY));
             obj.imagePatchMatrix = obj.imagePatchMatrix';
             
 %             figure(30); clf;
 %             imagesc(obj.imagePatchMatrix); colormap(gray); axis image; axis equal;
-            
-%             sigmaC = obj.rfSigmaCenter ./ 3.3; %microns -> VH pixels
-%             RF = fspecial('gaussian',2.*[radX radY] + 1,sigmaC);
-%             [rr, cc] = meshgrid(1:(2*radX+1),1:(2*radY+1));
-%             apertureMatrix = sqrt((rr-radX).^2 + ...
-%                 (cc-radY).^2) < (obj.apertureDiameter/2) ./ 3.3;
-%             apertureMatrix = apertureMatrix';
-%             weightingFxn = apertureMatrix .* RF;
-%             weightingFxn = weightingFxn ./ sum(weightingFxn(:)); %sum to one
-%             contrastPatch = double(obj.imagePatchMatrix) - ...
-%                 obj.equivalentIntensity*255 + ...
-%                 obj.backgroundIntensity*255;
-%             tempIm = contrastPatch' .* weightingFxn;
-%             mean_contrast = sum(tempIm(:));
-%             mean_linear = obj.equivalentIntensity * 255;
-%             tempIm = double(obj.imagePatchMatrix').*weightingFxn;
-%             mean_image = sum(tempIm(:));
 
             epoch.addParameter('currentStimSet', obj.currentStimSet);
             epoch.addParameter('backgroundIntensity', obj.backgroundIntensity);
@@ -210,10 +193,10 @@ classdef MeanPlusContrastImage < edu.washington.riekelab.protocols.RiekeLabStage
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(sceneVisible);
             elseif strcmp(obj.stimulusTag,'contrast')
-                contrastPatch = obj.imagePatchMatrix - ...
-                    obj.equivalentIntensity*255 + ...
-                    obj.backgroundIntensity*255;
-                scene = stage.builtin.stimuli.Image(contrastPatch);
+                tempDiff = (obj.equivalentIntensity*255 - ...
+                    obj.backgroundIntensity*255);
+                contrastPatch = double(obj.imagePatchMatrix) - tempDiff;
+                scene = stage.builtin.stimuli.Image(uint8(contrastPatch));
                 scene.size = canvasSize; %scale up to canvas size
                 scene.position = canvasSize/2 + centerOffsetPix;
                 % Use linear interpolation when scaling the image.

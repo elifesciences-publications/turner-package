@@ -134,8 +134,8 @@ classdef MeanPlusContrastImageFigure < symphonyui.core.FigureHandler
                     obj.summaryData.contrastResponses,...
                     'Parent', obj.axesHandle(2),'Color','k','Marker','o','LineStyle','none');
             else
-                set(obj.corrLineHandle, 'XData', obj.summaryData.imageResponses,...
-                    'YData', sumOfDecomposedStimuli);
+                set(obj.corrLineHandle, 'XData', obj.summaryData.imageResponses - obj.summaryData.linearResponses,...
+                    'YData', obj.summaryData.contrastResponses);
             end
             
         end
