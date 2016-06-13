@@ -8,6 +8,7 @@ classdef LinearFilterFigure < symphonyui.core.FigureHandler
         preTime
         stimTime
         frameDwell
+        noiseStdv
         seedID
         updatePattern
         figureTitle
@@ -35,6 +36,7 @@ classdef LinearFilterFigure < symphonyui.core.FigureHandler
             ip.addParameter('preTime', [], @(x)isvector(x));
             ip.addParameter('stimTime', [], @(x)isvector(x));
             ip.addParameter('frameDwell', [], @(x)isvector(x));
+            ip.addParameter('noiseStdv', 0.3, @(x)isvector(x));
             ip.addParameter('seedID', 'noiseSeed', @(x)ischar(x));
             ip.addParameter('figureTitle','Linear-Nonlinear analysis', @(x)ischar(x));
             %Update pattern [start point, interval]. Default is start at
@@ -47,6 +49,7 @@ classdef LinearFilterFigure < symphonyui.core.FigureHandler
             obj.preTime = ip.Results.preTime;
             obj.stimTime = ip.Results.stimTime;
             obj.frameDwell = ip.Results.frameDwell;
+            obj.noiseStdv = ip.Results.noiseStdv;
             obj.seedID = ip.Results.seedID;
             obj.figureTitle = ip.Results.figureTitle;
             obj.updatePattern = ip.Results.updatePattern;
@@ -140,7 +143,7 @@ classdef LinearFilterFigure < symphonyui.core.FigureHandler
                 % get stim trajectories and response in frame updates
                 chunkLen = obj.frameDwell*mean(diff(frameTimes));
                 for ii = 1:floor(stimFrames/obj.frameDwell)
-                    noise(ii) = obj.noiseStream.randn;
+                    noise(ii) = obj.noiseStdv * obj.noiseStream.randn;
                     response(ii) = mean(newResponse(round((ii-1)*chunkLen + 1) : round(ii*chunkLen)));
                 end
                 obj.allStimuli = cat(1,obj.allStimuli,noise);
@@ -171,17 +174,17 @@ classdef LinearFilterFigure < symphonyui.core.FigureHandler
     methods (Access = private)
         
         function onSelectedFitLN(obj, ~, ~)
-            measuredResponse = reshape(obj.allResponses,1,numel(obj.allResponses));
-            stimulusArray = reshape(obj.allStimuli,1,numel(obj.allStimuli));
+            measuredResponse = reshape(obj.allResponses',1,numel(obj.allResponses));
+            stimulusArray = reshape(obj.allStimuli',1,numel(obj.allStimuli));
             linearPrediction = conv(stimulusArray,obj.newFilter);
             linearPrediction = linearPrediction(1:length(stimulusArray));
             [~,edges,bin] = histcounts(linearPrediction,'BinMethod','auto');
             binCtrs = edges(1:end-1) + diff(edges);
+            
             binResp = zeros(size(binCtrs));
             for bb = 1:length(binCtrs)
                binResp(bb) = mean(measuredResponse(bin == bb)); 
             end
-            
             if isempty(obj.lnDataHandle)
                 obj.lnDataHandle = line(binCtrs, binResp,...
                     'Parent', obj.axesHandle(2),'LineStyle','none','Marker','o');
