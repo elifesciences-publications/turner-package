@@ -13,7 +13,7 @@ classdef AnnulusWeightTest < edu.washington.riekelab.protocols.RiekeLabStageProt
         backgroundIntensity = 0.5       % Background light intensity (0-1)
         centerOffset = [0, 0]           % center offset (um)
         onlineAnalysis = 'none'
-        numberOfAverages = uint16(10)    % Number of epochs
+        numberOfAverages = uint16(15)    % Number of epochs
         amp                             % Output amplifier
     end
     
@@ -36,7 +36,7 @@ classdef AnnulusWeightTest < edu.washington.riekelab.protocols.RiekeLabStageProt
         
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
-            colors = edu.washington.riekelab.turner.utils.pmkmp(2,'CubicYF');
+            colors = edu.washington.riekelab.turner.utils.pmkmp(3,'CubicYF');
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
@@ -99,10 +99,12 @@ classdef AnnulusWeightTest < edu.washington.riekelab.protocols.RiekeLabStageProt
             epoch.addDirectCurrentStimulus(device, device.background, duration, obj.sampleRate);
             epoch.addResponse(device);
             
-            isOdd = mod(obj.numEpochsCompleted, 2);
-            if (isOdd == 0)
+            tempInd = mod(obj.numEpochsCompleted, 3);
+            if (tempInd == 0)
+                obj.currentStimulusType = 'Center';
+            elseif (tempInd == 1)
                 obj.currentStimulusType = 'Reference';
-            elseif (isOdd == 1)
+            elseif (tempInd == 2)
                 obj.currentStimulusType = 'Test';
             end
             epoch.addParameter('currentStimulusType', obj.currentStimulusType);
@@ -117,33 +119,37 @@ classdef AnnulusWeightTest < edu.washington.riekelab.protocols.RiekeLabStageProt
             centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
             centerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.centerDiameter);
             
-            %Make the annulus
-            if strcmp(obj.currentStimulusType,'Reference')
-                innerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.referenceInnerDiameter);
-                outerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.referenceOuterDiameter);
-            elseif strcmp(obj.currentStimulusType,'Test')
-                innerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.testInnerDiameter);
-                outerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.testOuterDiameter);
+            if ~strcmp(obj.currentStimulusType,'Center')
+                %Make the annulus
+                if strcmp(obj.currentStimulusType,'Reference')
+                    innerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.referenceInnerDiameter);
+                    outerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.referenceOuterDiameter);
+                elseif strcmp(obj.currentStimulusType,'Test')
+                    innerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.testInnerDiameter);
+                    outerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.testOuterDiameter);
+                end
+                annulus = stage.builtin.stimuli.Ellipse();
+                annulus.color = obj.annulusIntensity;
+                annulus.radiusX = outerDiameterPix/2;
+                annulus.radiusY = outerDiameterPix/2;
+                annulus.position = canvasSize/2 + centerOffsetPix;
+                p.addStimulus(annulus);
+                annulusVisible = stage.builtin.controllers.PropertyController(annulus, 'visible', ...
+                    @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
+                p.addController(annulusVisible);
+
+                maskSpot = stage.builtin.stimuli.Ellipse();
+                maskSpot.color = obj.backgroundIntensity;
+                maskSpot.radiusX = innerDiameterPix/2;
+                maskSpot.radiusY = innerDiameterPix/2;
+                maskSpot.position = canvasSize/2 + centerOffsetPix;
+                p.addStimulus(maskSpot);
+                maskSpotVisible = stage.builtin.controllers.PropertyController(maskSpot, 'visible', ...
+                    @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
+                p.addController(maskSpotVisible);
+            else
+                %No annulus, just spot
             end
-            annulus = stage.builtin.stimuli.Ellipse();
-            annulus.color = obj.annulusIntensity;
-            annulus.radiusX = outerDiameterPix/2;
-            annulus.radiusY = outerDiameterPix/2;
-            annulus.position = canvasSize/2 + centerOffsetPix;
-            p.addStimulus(annulus);
-            annulusVisible = stage.builtin.controllers.PropertyController(annulus, 'visible', ...
-                @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
-            p.addController(annulusVisible);
-            
-            maskSpot = stage.builtin.stimuli.Ellipse();
-            maskSpot.color = obj.backgroundIntensity;
-            maskSpot.radiusX = innerDiameterPix/2;
-            maskSpot.radiusY = innerDiameterPix/2;
-            maskSpot.position = canvasSize/2 + centerOffsetPix;
-            p.addStimulus(maskSpot);
-            maskSpotVisible = stage.builtin.controllers.PropertyController(maskSpot, 'visible', ...
-                @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
-            p.addController(maskSpotVisible);
 
             %make the spot in the center
             spot = stage.builtin.stimuli.Ellipse();
