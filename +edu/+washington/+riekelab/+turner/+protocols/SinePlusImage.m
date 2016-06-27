@@ -91,8 +91,8 @@ classdef SinePlusImage < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             obj.patchLocation(2) = randsample((radY + 1):(1024 - radY),1);
             
             %start with no image flash, just sinusoid
-            %phase NaN never happens in createPresentation fxn
-            obj.phases = [NaN, 0:pi/4:7*pi/4];
+            %dumb: 100 = no image flash
+            obj.phases = [100, 0:pi/4:7*pi/4];
         end
 
         function prepareEpoch(obj, epoch)
@@ -147,9 +147,10 @@ classdef SinePlusImage < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             scene.setMinFunction(GL.LINEAR);
             scene.setMagFunction(GL.LINEAR);
             p.addStimulus(scene);
-            
+
             sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible',...
                     @(state)getSceneVisible(obj, state.frame, state.time));
+            p.addController(sceneVisible);
 
             function V = getSceneVisible(obj, frame, time)
                 if (time >= obj.preTime * 1e-3 && time < (obj.preTime + obj.stimTime) * 1e-3)
@@ -167,8 +168,7 @@ classdef SinePlusImage < edu.washington.riekelab.protocols.RiekeLabStageProtocol
                     V = 0;
                 end
             end
-            p.addController(sceneVisible);
-            
+
             % Create aperture stimulus (outer edge of annulus)
             aperture = stage.builtin.stimuli.Rectangle();
             aperture.position = canvasSize/2 + centerOffsetPix;
