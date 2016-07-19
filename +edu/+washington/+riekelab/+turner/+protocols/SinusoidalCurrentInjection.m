@@ -46,7 +46,7 @@ classdef SinusoidalCurrentInjection < edu.washington.riekelab.protocols.RiekeLab
             gen.stimTime = obj.stimTime;
             gen.tailTime = obj.tailTime;
             gen.amplitude = obj.sineAmplitude;
-            gen.period = (1 / obj.sineFrequency) * obj.sampleRate; %in msec
+            gen.period = (1 / obj.sineFrequency) * 1e3; %in msec
             gen.mean = obj.rig.getDevice(obj.amp).background.quantity;
             gen.sampleRate = obj.sampleRate;
             gen.units = obj.rig.getDevice(obj.amp).background.displayUnits;
