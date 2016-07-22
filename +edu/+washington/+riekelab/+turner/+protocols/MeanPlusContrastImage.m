@@ -10,6 +10,8 @@ classdef MeanPlusContrastImage < edu.washington.riekelab.protocols.RiekeLabStage
         noPatches = 30 %number of different image patches (fixations) to show
         apertureDiameter = 200 % um
         linearIntegrationFunction = 'gaussian center'
+        patchSampling = 'random'
+        patchContrast = 'all'
 
         rfSigmaCenter = 50 % (um) Enter from fit RF
 
@@ -25,6 +27,8 @@ classdef MeanPlusContrastImage < edu.washington.riekelab.protocols.RiekeLabStage
             '01192','01769','01829','02265','02281','02733','02999','03093',...
             '03347','03447','03584','03758','03760'})
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
+        patchSamplingType = symphonyui.core.PropertyType('char', 'row', {'random','ranked'})
+        patchContrastType = symphonyui.core.PropertyType('char', 'row', {'all','negative','positive'})
         linearIntegrationFunctionType = symphonyui.core.PropertyType('char', 'row', {'gaussian center','uniform'})
         centerOffsetType = symphonyui.core.PropertyType('denserealdouble', 'matrix')
         
@@ -85,8 +89,46 @@ classdef MeanPlusContrastImage < edu.washington.riekelab.protocols.RiekeLabStage
             radX = round(stimSize_VHpix(1) / 2); %boundaries for fixation draws depend on stimulus size
             radY = round(stimSize_VHpix(2) / 2);
             %get patch locations:
-            obj.patchLocations(1,1:obj.noPatches) = randsample((radX + 1):(1536 - radX),obj.noPatches); %in VH pixels
-            obj.patchLocations(2,1:obj.noPatches) = randsample((radY + 1):(1024 - radY),obj.noPatches);
+            load([resourcesDir,'NaturalImageFlashLibrary_072216.mat']);
+            fieldName = ['imk', obj.imageName];
+            %1) restrict to desired patch contrast:
+            LnResp = imageData.(fieldName).LnModelResponse;
+            if strcmp(obj.patchContrast,'all')
+                inds = 1:length(LnResp);
+            elseif strcmp(obj.patchContrast,'positive')
+                inds = find(LnResp > 0);
+            elseif strcmp(obj.patchContrast,'negative')
+                inds = find(LnResp <= 0);
+            end
+            xLoc = imageData.(fieldName).location(inds,1);
+            yLoc = imageData.(fieldName).location(inds,2);
+            subunitResp = imageData.(fieldName).SubunitModelResponse(inds);
+            LnResp = imageData.(fieldName).LnModelResponse(inds);
+            
+            %2) do patch sampling:
+            responseDifferences = subunitResp - LnResp;
+            if strcmp(obj.patchSampling,'random')
+                %get patch indices:
+                pullInds = randsample(1:length(xLoc),obj.noPatches);
+            else strcmp(obj.patchSampling,'ranked')
+                %pull more than needed to account for empty bins at tail
+                [~, ~, bin] = histcounts(responseDifferences,1.5*obj.noPatches);
+                populatedBins = unique(bin);
+                %pluck one patch from each bin
+                pullInds = arrayfun(@(b) find(b == bin,1),populatedBins);
+                %get patch indices:
+                pullInds = randsample(pullInds,obj.noPatches);
+            end
+            obj.patchLocations(1,1:obj.noPatches) = xLoc(pullInds); %in VH pixels
+            obj.patchLocations(2,1:obj.noPatches) = yLoc(pullInds);
+            subunitResp = subunitResp(pullInds);
+            LnResp = LnResp(pullInds);
+            responseDifferences = subunitResp - LnResp;
+            
+            figure(30); clf;
+            subplot(211); hist(responseDifferences,100);
+            subplot(212); plot(subunitResp,LnResp,'ko');
+            title('On model responses')
             
             %get equivalent intensity values:
             %   Get the model RF...
