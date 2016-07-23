@@ -11,16 +11,17 @@ end
 
 img_filenames_list = sort(img_filenames_list);
 
-
 %% step 1: make RF components
 imageScalingFactor = 3.3; %microns on retina per image pixel (3.3 um/arcmin visual angle)
 NumFixations = 10000;           % how many patches to sample
 % RF properties:
+stimSize_microns = [1460 1100];          % Based on biggest screen in microns (2P emagin, [1440 1080]) so no fixations take you outside of image edge
 FilterSize_microns = 250;                % size of patch (um). Code run-time is very sensitive to this
 SubunitRadius_microns = 12;              % radius of subunit (12 um -> 48 um subunit diameter)
 CenterRadius_microns = 50;              % center radius (50 um -> 200 um RF center size)
 
 %convert to pixels:
+stimSize = round(stimSize_microns / imageScalingFactor);
 FilterSize = round(FilterSize_microns / imageScalingFactor);
 SubunitRadius = round(SubunitRadius_microns / imageScalingFactor);
 CenterRadius = round(CenterRadius_microns / imageScalingFactor);
@@ -65,8 +66,6 @@ for ImageIndex = 1:length(img_filenames_list)
     f1=fopen([IMAGES_DIR, img_filenames_list{ImageIndex}],'rb','ieee-be');
     w=1536;h=1024;
     my_image=fread(f1,[w,h],'uint16');
-% %     figure(2); clf;  
-% %     imagesc(my_image.^0.3);colormap gray;axis image; axis off; hold on;
     [ImageX, ImageY] = size(my_image);
 
     % scale image to [0 1] -- contrast, relative to mean over entire image...
@@ -81,14 +80,12 @@ for ImageIndex = 1:length(img_filenames_list)
     for patch = 1:NumFixations
 
         % choose location
-        x = round(FilterSize/2 + (ImageX - FilterSize)*rand);
-        y = round(FilterSize/2 + (ImageY - FilterSize)*rand);
+        x = round(stimSize(1)/2 + (ImageX - stimSize(1))*rand);
+        y = round(stimSize(2)/2 + (ImageY - stimSize(2))*rand);
         Location(patch,:) = [x, y];
 
-        % store patch
+        % get patch
         ImagePatch = my_image_nomean(x-FilterSize/2+1:x+FilterSize/2,y-FilterSize/2+1:y+FilterSize/2);
-    %     PixelDistribution(patch,:) = ImagePatch(:);
-    %     StoredImagePatch(patch, :, :) = ImagePatch;
 
         % convolve patch with subunit filter
         ImagePatch = conv2(ImagePatch, SubunitFilter, 'same');  
@@ -109,20 +106,13 @@ for ImageIndex = 1:length(img_filenames_list)
             fprintf(1, '%d ', patch);
         end
     end
-% %     figure(3); clf
-% %     % subunit vs linear-nonlinear
-% %     plot(RFSubCenterProj, RFCenterProj, '.'); hold on; 
-% %     plot([min(RFCenterProj) max(RFCenterProj)], [min(RFCenterProj) max(RFCenterProj)], 'r');
-% %     ylabel('linear-nonlinear center');
-% %     xlabel('nonlinear subunit center');
-
     imageData.(ImageID).location = Location;
     imageData.(ImageID).LnModelResponse = RFCenterProj;
     imageData.(ImageID).SubunitModelResponse = RFSubCenterProj;
     % calculate differences
     imageData.(ImageID).responseDifferences = ...
          imageData.(ImageID).SubunitModelResponse - imageData.(ImageID).LnModelResponse;
-     clc;
+     clc; 
      disp(num2str(ImageIndex))
 end
 modelParameters.randSeed = randSeed;
@@ -134,7 +124,6 @@ modelParameters.CenterRadius_microns = CenterRadius_microns;
 modelParameters.FilterSize = FilterSize;
 modelParameters.SubunitRadius = SubunitRadius;
 modelParameters.CenterRadius = CenterRadius;
-
 
 save('NaturalImageFlashLibrary_072216.mat','imageData','modelParameters');
 
@@ -153,3 +142,8 @@ pullInds = arrayfun(@(b) find(b == bin,1),populatedBins);
 figure(3); subplot(2,2,3)
 hist(imageData.(ImageID).responseDifferences(pullInds),noBins)
 subplot(2,2,4); plot(imageData.(ImageID).SubunitModelResponse(pullInds),imageData.(ImageID).LnModelResponse(pullInds),'ko')
+
+%%
+figure(2); clf;  
+imagesc((my_image').^0.3);colormap gray;axis image; axis off; hold on;
+plot(imageData.(ImageID).location(:,1),imageData.(ImageID).location(:,2),'r.');
