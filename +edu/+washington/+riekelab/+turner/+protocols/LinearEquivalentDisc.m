@@ -126,10 +126,10 @@ classdef LinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabStageP
             LnResp = LnResp(pullInds);
             responseDifferences = subunitResp - LnResp;
             
-            figure(30); clf;
-            subplot(211); hist(responseDifferences,100);
-            subplot(212); plot(subunitResp,LnResp,'ko');
-            title('On model responses')
+%             figure(30); clf;
+%             subplot(211); hist(responseDifferences,100);
+%             subplot(212); plot(subunitResp,LnResp,'ko');
+%             title('On model responses')
             
             %get equivalent intensity values:
             %   Get the model RF...
