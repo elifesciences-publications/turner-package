@@ -78,7 +78,7 @@ classdef CenterSurroundNoise < edu.washington.riekelab.protocols.RiekeLabStagePr
                     obj.surroundNoiseSeed = RandStream.shuffleSeed;
                 else
                     obj.centerNoiseSeed = 0;
-                    obj.surroundNoiseSeed = 0;
+                    obj.surroundNoiseSeed = 1;
                 end
             elseif index == 1
                 obj.currentStimulus = 'Surround';
