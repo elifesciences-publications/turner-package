@@ -21,6 +21,8 @@ classdef CSEyeMovementLuminance < edu.washington.riekelab.protocols.RiekeLabStag
         centerTrajectory
         surroundTrajectory
         timeTraj
+        currentStimSet
+        backgroundIntensity
     end
     
     methods
@@ -36,6 +38,14 @@ classdef CSEyeMovementLuminance < edu.washington.riekelab.protocols.RiekeLabStag
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
+            
+            if ~strcmp(obj.onlineAnalysis,'none')
+                obj.showFigure('edu.washington.riekelab.turner.figures.CSAdditivityFigure',...
+                    obj.rig.getDevice(obj.amp),...
+                    'recordingType',obj.onlineAnalysis,...
+                    'stimulusIndex',obj.stimulusIndex,...
+                    'preTime',obj.preTime,'tailTime',obj.tailTime);
+            end
             
             %load data and get luminance trajectories
             resourcesDir = 'C:\Users\Public\Documents\turner-package\resources\';
