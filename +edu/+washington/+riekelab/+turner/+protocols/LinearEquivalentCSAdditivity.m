@@ -1,12 +1,12 @@
 classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.protocols.RiekeLabStageProtocol
 
     properties
-        preTime = 100 % ms
+        preTime = 150 % ms
         stimTime = 200 % ms
-        tailTime = 100 % ms
+        tailTime = 150 % ms
         imageName = '00152' %van hateren image names
         
-        noPatches = 30 %number of different image patches (fixations) to show
+        noPatches = 50 %number of different image patches (fixations) to show
         centerDiameter = 200 % um
         annulusInnerDiameter = 300 % um
         annulusOuterDiameter = 600 % um
@@ -20,7 +20,7 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.protocols.RiekeL
         seed = 1 % rand seed for picking image patches
         centerOffset = [0, 0] % [x,y] (um)
         onlineAnalysis = 'none'
-        numberOfAverages = uint16(270) % number of epochs to queue
+        numberOfAverages = uint16(1200) % number of epochs to queue
         amp % Output amplifier
     end
     
@@ -65,7 +65,7 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.protocols.RiekeL
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
-                'groupBy',{'currentStimulus'});
+                'groupBy',{'currentCenter','currentSurround'});
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
             
@@ -78,6 +78,7 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.protocols.RiekeL
             img = double(img);
             img = (img./max(img(:))); %rescale s.t. brightest point is maximum monitor level
             obj.backgroundIntensity = mean(img(:));%set the mean to the mean over the image
+            contrastImage = (img - obj.backgroundIntensity) ./ obj.backgroundIntensity;
             img = img.*255; %rescale s.t. brightest point is maximum monitor level
             obj.wholeImageMatrix = uint8(img);
             rng(obj.seed); %set random seed for fixation draw
@@ -118,6 +119,13 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.protocols.RiekeL
             
             
             %GET EQUIVALENT INTENSITY VALUES...
+            %size of the stimulus on the prep:
+            stimSize = obj.rig.getDevice('Stage').getCanvasSize() .* ...
+                obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'); %um
+            stimSize_VHpix = stimSize ./ (3.3); %um / (um/pixel) -> pixel
+            radX = round(stimSize_VHpix(1) / 2); %boundaries for fixation draws depend on stimulus size
+            radY = round(stimSize_VHpix(2) / 2);
+
             % % % % % First the RF center % % % % % % % % % % % % % % % % % % % % % % % % 
             sigmaC = obj.rfSigmaCenter ./ 3.3; %microns -> VH pixels
             RFcenter = fspecial('gaussian',2.*[radX radY] + 1,sigmaC);
@@ -157,8 +165,8 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.protocols.RiekeL
                 apertureMatrix = ones(2.*[radX radY] + 1);
             end
             
-            annulusMatrix = min(maskMatrix,apertureMatrix); 
-            if strcmp(obj.linearIntegrationFunction,'gaussian surround')
+            annulusMatrix = min(maskMatrix,apertureMatrix);  %#ok<UDIM>
+            if strcmp(obj.linearIntegrationFunction,'gaussian')
                 surroundWeightingFxn = annulusMatrix .* RFsurround; %set to zero mean gray pixels
             elseif strcmp(obj.linearIntegrationFunction,'uniform')
                 surroundWeightingFxn = annulusMatrix;
@@ -235,37 +243,37 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.protocols.RiekeL
 
             
             if strcmp(obj.currentCenter,'Image')
-                makeScene;
+                makeScene(obj);
                 if  strcmp(obj.currentSurround,'Image')
-                    makeAnnulusMask;
-                    makeAperture(annulusOuterDiameterPix);
+                    makeAnnulusMask(obj);
+                    makeAperture(obj,annulusOuterDiameterPix);
                 elseif strcmp(obj.currentSurround,'Equiv')
-                    makeAperture(centerDiameterPix);
-                    % % ? ? ? ? 
-                elseif strcmp(obj.currentSurround,'None')
-                    makeAperture(centerDiameterPix);
+                    makeAperture(obj,centerDiameterPix);
+                    makeAnnulus(obj,obj.equivalentSurroundIntensity);
+                elseif strcmp(obj.currentSurround,'none')
+                    makeAperture(obj,centerDiameterPix);
                 end
             elseif strcmp(obj.currentCenter,'Equiv')
                 if  strcmp(obj.currentSurround,'Image')
-                    makeScene;
-                    makeMediumMask;
-                    makeAperture(annulusOuterDiameterPix);
-                    makeSpot(centerDiameterPix,obj.equivalentCenterIntensity);
+                    makeScene(obj);
+                    makeMediumMask(obj);
+                    makeAperture(obj,annulusOuterDiameterPix);
+                    makeSpot(obj,centerDiameterPix,obj.equivalentCenterIntensity);
                 elseif strcmp(obj.currentSurround,'Equiv')
-                    makeSpot(annulusOuterDiameterPix,obj.equivalentSurroundIntensity);
-                    makeMediumMask;
-                    makeSpot(centerDiameterPix,obj.equivalentCenterIntensity);
-                elseif strcmp(obj.currentSurround,'None')
-                    makeSpot(centerDiameterPix,obj.equivalentCenterIntensity);
+                    makeSpot(obj,annulusOuterDiameterPix,obj.equivalentSurroundIntensity);
+                    makeMediumMask(obj);
+                    makeSpot(obj,centerDiameterPix,obj.equivalentCenterIntensity);
+                elseif strcmp(obj.currentSurround,'none')
+                    makeSpot(obj,centerDiameterPix,obj.equivalentCenterIntensity);
                 end
             elseif strcmp(obj.currentCenter,'none')
                 if  strcmp(obj.currentSurround,'Image')
-                    makeScene;
-                    makeMediumMask;
-                    makeAperture(annulusOuterDiameterPix);
+                    makeScene(obj);
+                    makeMediumMask(obj);
+                    makeAperture(obj,annulusOuterDiameterPix);
                 elseif strcmp(obj.currentSurround,'Equiv')
-                    makeSpot(annulusOuterDiameterPix,obj.equivalentSurroundIntensity);
-                    makeMediumMask;
+                    makeSpot(obj,annulusOuterDiameterPix,obj.equivalentSurroundIntensity);
+                    makeMediumMask(obj);
                 end
             end
             
@@ -291,6 +299,23 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.protocols.RiekeL
                 annulus.setMask(mask);
                 p.addStimulus(annulus);
             end
+            function makeAnnulus(~,intensity)
+                rect = stage.builtin.stimuli.Rectangle();
+                rect.position = canvasSize/2 + centerOffsetPix;
+                rect.color = intensity;
+                rect.size = [max(canvasSize) max(canvasSize)];
+                
+                distanceMatrix = createDistanceMatrix(1024);
+                annulus = uint8((distanceMatrix < annulusOuterDiameterPix/max(canvasSize) & ...
+                    distanceMatrix > annulusInnerDiameterPix/max(canvasSize)) * 255);
+                mask = stage.core.Mask(annulus);
+
+                rect.setMask(mask);
+                p.addStimulus(rect);
+                rectVisible = stage.builtin.controllers.PropertyController(rect, 'visible', ...
+                    @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
+                p.addController(rectVisible);
+            end
             function makeAperture(obj, apertureDiameter)
                 aperture = stage.builtin.stimuli.Rectangle();
                 aperture.position = canvasSize/2 + centerOffsetPix;
@@ -307,6 +332,9 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.protocols.RiekeL
                 maskSpot.position = canvasSize/2 + centerOffsetPix;
                 maskSpot.color = obj.backgroundIntensity;
                 p.addStimulus(maskSpot);
+                maskSpotVisible = stage.builtin.controllers.PropertyController(maskSpot, 'visible', ...
+                    @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
+                p.addController(maskSpotVisible);
             end
             function makeSpot(~,spotDiameter,spotColor)
                 spot = stage.builtin.stimuli.Ellipse();
@@ -315,6 +343,14 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.protocols.RiekeL
                 spot.position = canvasSize/2 + centerOffsetPix;
                 spot.color = spotColor;
                 p.addStimulus(spot);
+                spotVisible = stage.builtin.controllers.PropertyController(spot, 'visible', ...
+                    @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
+                p.addController(spotVisible);
+            end
+            function m = createDistanceMatrix(size)
+                step = 2 / (size - 1);
+                [xx, yy] = meshgrid(-1:step:1, -1:step:1);
+                m = sqrt(xx.^2 + yy.^2);
             end
             
         end
