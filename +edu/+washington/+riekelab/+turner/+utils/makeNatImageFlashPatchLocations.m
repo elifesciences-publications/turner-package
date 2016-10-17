@@ -15,7 +15,7 @@ img_filenames_list = sort(img_filenames_list);
 imageScalingFactor = 3.3; %microns on retina per image pixel (3.3 um/arcmin visual angle)
 NumFixations = 10000;           % how many patches to sample
 % RF properties:
-stimSize_microns = [1460 1100];          % Based on biggest screen in microns (2P emagin, [1440 1080]) so no fixations take you outside of image edge
+stimSize_microns = [2372, 1482];          % Based on biggest screen in microns (lightcrafter confocal, 1.3 * [1824 1140]) so no fixations take you outside of image edge
 FilterSize_microns = 250;                % size of patch (um). Code run-time is very sensitive to this
 SubunitRadius_microns = 12;              % radius of subunit (12 um -> 48 um subunit diameter)
 CenterRadius_microns = 50;              % center radius (50 um -> 200 um RF center size)
@@ -125,7 +125,7 @@ modelParameters.FilterSize = FilterSize;
 modelParameters.SubunitRadius = SubunitRadius;
 modelParameters.CenterRadius = CenterRadius;
 
-save('NaturalImageFlashLibrary_072216.mat','imageData','modelParameters');
+save('NaturalImageFlashLibrary_101716.mat','imageData','modelParameters');
 
 %% Code like the following in protocols to do biased sampling:
 noBins = 50; %from no. image patches to show
