@@ -69,12 +69,20 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.protocols.RiekeL
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
             
+            %GET EQUIVALENT INTENSITY VALUES...
+            %size of the stimulus on the prep:
+            stimSize = obj.rig.getDevice('Stage').getCanvasSize() .* ...
+                obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'); %um
+            stimSize_VHpix = stimSize ./ (3.3); %um / (um/pixel) -> pixel
+            radX = round(stimSize_VHpix(1) / 2); %boundaries for fixation draws depend on stimulus size
+            radY = round(stimSize_VHpix(2) / 2);
+            
             %load appropriate image...
             resourcesDir = 'C:\Users\Public\Documents\turner-package\resources\';
             obj.currentStimSet = '/VHsubsample_20160105';
             fileId=fopen([resourcesDir, obj.currentStimSet, '/imk', obj.imageName,'.iml'],'rb','ieee-be');
             img = fread(fileId, [1536,1024], 'uint16');
-           
+
             img = double(img);
             img = (img./max(img(:))); %rescale s.t. brightest point is maximum monitor level
             obj.backgroundIntensity = mean(img(:));%set the mean to the mean over the image
@@ -84,7 +92,7 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.protocols.RiekeL
             rng(obj.seed); %set random seed for fixation draw
             
             %get patch locations:
-            load([resourcesDir,'NaturalImageFlashLibrary_072216.mat']);
+            load([resourcesDir,'NaturalImageFlashLibrary_101716.mat']);
             fieldName = ['imk', obj.imageName];
             %1) restrict to desired patch contrast:
             LnResp = imageData.(fieldName).LnModelResponse;
@@ -116,15 +124,6 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.protocols.RiekeL
             end
             obj.patchLocations(1,1:obj.noPatches) = xLoc(pullInds); %in VH pixels
             obj.patchLocations(2,1:obj.noPatches) = yLoc(pullInds);
-            
-            
-            %GET EQUIVALENT INTENSITY VALUES...
-            %size of the stimulus on the prep:
-            stimSize = obj.rig.getDevice('Stage').getCanvasSize() .* ...
-                obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'); %um
-            stimSize_VHpix = stimSize ./ (3.3); %um / (um/pixel) -> pixel
-            radX = round(stimSize_VHpix(1) / 2); %boundaries for fixation draws depend on stimulus size
-            radY = round(stimSize_VHpix(2) / 2);
 
             % % % % % First the RF center % % % % % % % % % % % % % % % % % % % % % % % % 
             sigmaC = obj.rfSigmaCenter ./ 3.3; %microns -> VH pixels
