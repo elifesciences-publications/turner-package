@@ -50,6 +50,13 @@ classdef TextureCSAdditiviy < edu.washington.riekelab.protocols.RiekeLabStagePro
                 'groupBy',{'currentStimulus'});
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
+            if ~strcmp(obj.onlineAnalysis,'none')
+                obj.showFigure('edu.washington.riekelab.turner.figures.CSSpatialTuningFigure',...
+                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
+                'preTime',obj.preTime,'stimTime',obj.stimTime,...
+                'centerSigmas',obj.centerSigmas,'surroundSigmas',obj.surroundSigmas);
+            end
+            
             
             %get a list of all center, surround sigma pairs and randomize
             %its order
@@ -75,15 +82,23 @@ classdef TextureCSAdditiviy < edu.washington.riekelab.protocols.RiekeLabStagePro
                 sigmaInd = mod(floor(obj.numEpochsCompleted/3), size(obj.sigmaPairsList,1)) + 1;
                 obj.currentCenterSigma = obj.sigmaPairsList(sigmaInd,1);
                 obj.currentSurroundSigma = obj.sigmaPairsList(sigmaInd,2);
+
+                %convert to canvas pixels
+                currentCenterSigmaPix = obj.rig.getDevice('Stage').um2pix(obj.currentCenterSigma);
+                currentSurroundSigmaPix = obj.rig.getDevice('Stage').um2pix(obj.currentSurroundSigma);
                 
                 % seeds:
                 obj.currentCenterSeed = RandStream.shuffleSeed;
                 obj.currentSurroundSeed = RandStream.shuffleSeed;
 
-                obj.centerTexture = makeTextureMatrix(textureSize,...
-                    obj.currentCenterSigma, obj.currentCenterSeed, obj.backgroundIntensity);
-                obj.surroundTexture = makeTextureMatrix(textureSize,...
-                    obj.currentSurroundSigma, obj.currentSurroundSeed, obj.backgroundIntensity);
+                canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
+                obj.centerTexture = edu.washington.riekelab.turner.utils.makeTextureMatrix(max(canvasSize),...
+                    currentCenterSigmaPix, obj.currentCenterSeed, obj.backgroundIntensity);
+                obj.centerTexture = uint8(obj.centerTexture .* 255);
+                
+                obj.surroundTexture = edu.washington.riekelab.turner.utils.makeTextureMatrix(max(canvasSize),...
+                    currentSurroundSigmaPix, obj.currentSurroundSeed, obj.backgroundIntensity);
+                obj.surroundTexture = uint8(obj.surroundTexture .* 255);
 
             elseif stimInd == 1
                 obj.currentStimulus = 'Surround';
@@ -92,8 +107,8 @@ classdef TextureCSAdditiviy < edu.washington.riekelab.protocols.RiekeLabStagePro
             end
 
             epoch.addParameter('currentCenterSigma', obj.currentCenterSigma);
-            epoch.addParameter('currentCenterSeed', obj.currentCenterSeed);
             epoch.addParameter('currentSurroundSigma', obj.currentSurroundSigma);
+            epoch.addParameter('currentCenterSeed', obj.currentCenterSeed);
             epoch.addParameter('currentSurroundSeed', obj.currentSurroundSeed);
             epoch.addParameter('currentStimulus', obj.currentStimulus);
         end
@@ -107,62 +122,54 @@ classdef TextureCSAdditiviy < edu.washington.riekelab.protocols.RiekeLabStagePro
             annulusInnerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusInnerDiameter);
             annulusOuterDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusOuterDiameter);
             centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
+
+            if strcmp(obj.currentStimulus,'Center')
+                makeCenterTexture;
+            elseif strcmp(obj.currentStimulus,'Surround')
+                makeSurroundTexture
+
+            elseif strcmp(obj.currentStimulus,'Center-Surround')
+                makeCenterTexture
+                makeSurroundTexture
+            end
             
-            %make image patch:
-            scene = stage.builtin.stimuli.Image(obj.imagePatchMatrix);
-            scene.size = canvasSize; %scale up to canvas size
-            scene.position = canvasSize/2 + centerOffsetPix;
-            % Use linear interpolation when scaling the image.
-            scene.setMinFunction(GL.LINEAR);
-            scene.setMagFunction(GL.LINEAR);
-            p.addStimulus(scene);
-            sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
-                @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
-            p.addController(sceneVisible);
+            function makeCenterTexture
+                %make center texture:
+                cTexture = stage.builtin.stimuli.Image(obj.centerTexture);
+                cTexture.size = [max(canvasSize), max(canvasSize)];
+                cTexture.position = canvasSize/2 + centerOffsetPix;
+                p.addStimulus(cTexture);
+                sceneVisible = stage.builtin.controllers.PropertyController(cTexture, 'visible', ...
+                    @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
+                p.addController(sceneVisible);
+                %add an aperture to it:
+                distanceMatrix = createDistanceMatrix(1024);
+                aperture = uint8((distanceMatrix < centerDiameterPix/max(canvasSize)) * 255);
+                apertureMask = stage.core.Mask(aperture);
+                cTexture.setMask(apertureMask);   
+            end
             
-            if strcmp(obj.currentStimulus,'Center') %aperture around center
-                aperture = stage.builtin.stimuli.Rectangle();
-                aperture.position = canvasSize/2 + centerOffsetPix;
-                aperture.color = obj.backgroundIntensity;
-                aperture.size = [max(canvasSize) max(canvasSize)];
-                mask = stage.core.Mask.createCircularAperture(centerDiameterPix/max(canvasSize), 1024);
-                aperture.setMask(mask);
-                p.addStimulus(aperture);
-            elseif strcmp(obj.currentStimulus,'Surround') %aperture in far surround + mask in center
-                % big aperture:
-                aperture = stage.builtin.stimuli.Rectangle();
-                aperture.position = canvasSize/2 + centerOffsetPix;
-                aperture.color = obj.backgroundIntensity;
-                aperture.size = [max(canvasSize) max(canvasSize)];
-                mask = stage.core.Mask.createCircularAperture(annulusOuterDiameterPix/max(canvasSize), 1024);
-                aperture.setMask(mask);
-                p.addStimulus(aperture);
-                % center mask:
-                maskSpot = stage.builtin.stimuli.Ellipse();
-                maskSpot.radiusX = annulusInnerDiameterPix/2;
-                maskSpot.radiusY = annulusInnerDiameterPix/2;
-                maskSpot.position = canvasSize/2 + centerOffsetPix;
-                maskSpot.color = obj.backgroundIntensity;
-                p.addStimulus(maskSpot);
-            elseif strcmp(obj.currentStimulus,'Center-Surround') %annulus between center & surround
-                % big aperture:
-                aperture = stage.builtin.stimuli.Rectangle();
-                aperture.position = canvasSize/2 + centerOffsetPix;
-                aperture.color = obj.backgroundIntensity;
-                aperture.size = [max(canvasSize) max(canvasSize)];
-                mask = stage.core.Mask.createCircularAperture(annulusOuterDiameterPix/max(canvasSize), 1024);
-                aperture.setMask(mask);
-                p.addStimulus(aperture);
-                
-                %annulus between center & surround:
-                annulus = stage.builtin.stimuli.Rectangle();
-                annulus.position = canvasSize/2 + centerOffsetPix;
-                annulus.color = obj.backgroundIntensity;
-                annulus.size = [max(canvasSize) max(canvasSize)];
-                mask = stage.core.Mask.createAnnulus(centerDiameterPix/max(canvasSize),...
-                    annulusInnerDiameterPix/max(canvasSize),1024);
-                annulus.setMask(mask);
-                p.addStimulus(annulus);
+            function makeSurroundTexture
+                %make surround texture:
+                sTexture = stage.builtin.stimuli.Image(obj.surroundTexture);
+                sTexture.size = [max(canvasSize), max(canvasSize)];
+                sTexture.position = canvasSize/2 + centerOffsetPix;
+                p.addStimulus(sTexture);
+                sceneVisible = stage.builtin.controllers.PropertyController(sTexture, 'visible', ...
+                    @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
+                p.addController(sceneVisible);
+                %add an annulus aperture to it:
+                distanceMatrix = createDistanceMatrix(1024);
+                annulus = uint8((distanceMatrix < annulusOuterDiameterPix/max(canvasSize) & ...
+                    distanceMatrix > annulusInnerDiameterPix/max(canvasSize)) * 255);
+                annulusMask = stage.core.Mask(annulus);
+                sTexture.setMask(annulusMask);
+            end
+            
+            function m = createDistanceMatrix(size)
+                step = 2 / (size - 1);
+                [xx, yy] = meshgrid(-1:step:1, -1:step:1);
+                m = sqrt(xx.^2 + yy.^2);
             end
         end
         
