@@ -1,4 +1,4 @@
-function mat = makeTextureMatrix(textureSize, sigma, randSeed, meanIntensity)
+function mat = makeTextureMatrix(textureSize, sigma, randSeed, meanIntensity,contrast)
 % set random seed
 stream = RandStream('mt19937ar','Seed',randSeed);
 mat = double(rand(stream, [textureSize,textureSize]));
@@ -14,7 +14,9 @@ m_orig = mat;
 for bb=1:length(bins)-1
     mat(m_orig>bins(bb) & m_orig<=bins(bb+1)) = bb*(1/(length(bins)-1));
 end
-% final little scaling adjustments
+% scale to [0 1]
 mat = mat - min(mat(:));
-mat = 2 * meanIntensity .* (mat ./ max(mat(:)));
+mat = 2* meanIntensity .* (mat ./ max(mat(:)));
+% scale by contrast
+mat = (mat - meanIntensity).*contrast + meanIntensity;
 end
