@@ -86,7 +86,6 @@ classdef CSSpatialTuningFigure < symphonyui.core.FigureHandler
                 'Parent', obj.axesHandle(2),'Color',colors(2,:),'Marker','o','LineStyle','-');
             obj.lineHandle.centerSurround = imagesc(0, 0, 0, 'Parent',obj.axesHandle(3));
             colormap(obj.axesHandle(3),gray);
-%             c = colorbar; c.Parent = obj.lineHandle.centerSurround;
         end
 
         function handleEpoch(obj, epoch)
@@ -137,17 +136,10 @@ classdef CSSpatialTuningFigure < symphonyui.core.FigureHandler
                     obj.centerSurround.count(surroundInd,centerInd) + 1;
                 obj.centerSurround.response(surroundInd,centerInd) = ...
                     obj.centerSurround.response(surroundInd,centerInd) + newEpochResponse;
-                
-%                 obj.lineHandle.centerSurround = stem3(obj.centerSigmas, obj.surroundSigmas,...
-%                     obj.centerSurround.response ./ obj.centerSurround.count,...
-%                 'Parent', obj.axesHandle(3),'Color','k','Marker','o','LineStyle','-');
 
                 obj.lineHandle.centerSurround = imagesc(obj.centerSigmas, obj.surroundSigmas,...
                     obj.centerSurround.response ./ obj.centerSurround.count,...
                     'Parent',obj.axesHandle(3));
-               
-                
-                
             end
         end
         
