@@ -115,7 +115,7 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.protocols.RiekeL
                 pullInds = randsample(1:length(xLoc),obj.noPatches);
             else strcmp(obj.patchSampling,'ranked')
                 %pull more than needed to account for empty bins at tail
-                [~, ~, bin] = histcounts(responseDifferences,1.5*obj.noPatches);
+                [~, ~, bin] = histcounts(responseDifferences,2*obj.noPatches);
                 populatedBins = unique(bin);
                 %pluck one patch from each bin
                 pullInds = arrayfun(@(b) find(b == bin,1),populatedBins);
