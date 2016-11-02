@@ -1,4 +1,4 @@
-classdef TextureCSAdditiviy < edu.washington.riekelab.protocols.RiekeLabStageProtocol
+classdef TextureCSAdditivity < edu.washington.riekelab.protocols.RiekeLabStageProtocol
 
     properties
         preTime = 200 % ms
