@@ -44,11 +44,8 @@ classdef (Abstract) NaturalImageFlashProtocol < edu.washington.riekelab.protocol
             obj.currentImageSet = '/VHsubsample_20160105';
             obj.screenSize = obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel') .* ...
                 obj.rig.getDevice('Stage').getCanvasSize(); %microns
-            if obj.screenSize(1) <= 1440 %(largest small: rigB OLED is [1.8 .* [800 600] = [1440 1080])
-                obj.currentStimSet = 'NaturalImageFlashLibrary_small_110216'; %OLED on rigs F,E,B
-            elseif obj.screenSize(1) >= 2370 %(smallest big: rigE Lcr is [1.3 .* [1824 1140] = [2371.2 1482])
-                obj.currentStimSet = 'NaturalImageFlashLibrary_big_110216'; %OLED on rigG or Lcr on rigE
-            end
+            obj.currentStimSet = 'NaturalImageFlashLibrary_110316'; %OLED on rigs F,E,B
+
             
             % get the image and scale it:
             fileId=fopen([resourcesDir, obj.currentImageSet, '/imk', obj.imageName,'.iml'],'rb','ieee-be');

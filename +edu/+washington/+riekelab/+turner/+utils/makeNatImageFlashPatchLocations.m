@@ -12,12 +12,18 @@ end
 img_filenames_list = sort(img_filenames_list);
 
 %% step 1: make RF components
-imageScalingFactor = 3.3; %microns on retina per image pixel (3.3 um/arcmin visual angle)
+imageScalingFactor = 6.6; %microns on retina per image pixel (3.3 um/arcmin visual angle)
 NumFixations = 10000;           % how many patches to sample
+
+% Screen sizes (microns) on prep:
+%     OLED on Old slice, Confocal = 1.2 .* [800 600]  = [960, 720]
+%     OLED on 2P = 1.8 .* [800 600]  = [1440, 1080]
+%     OLED on RigG = 3.3 .* [800 600]  = [2640, 1980]   <------------
+%     Lcr on Confocal = 1.3 .* [1824 1140]  = [2371.2, 1482]
+    
+stimSize_microns = [2640, 1980];        % Based on biggest screen in microns, so no fixations take you outside of image edge
+
 % RF properties:
-%standard: [2372, 1482] (lightcrafter confocal, 1.3 * [1824 1140])
-%big: [2640, 1980] (RigG OLED, 3.3 * [800 60])
-stimSize_microns = [2640, 1980];          % Based on biggest screen in microns, so no fixations take you outside of image edge
 FilterSize_microns = 250;                % size of patch (um). Code run-time is very sensitive to this
 SubunitRadius_microns = 12;              % radius of subunit (12 um -> 48 um subunit diameter)
 CenterRadius_microns = 50;              % center radius (50 um -> 200 um RF center size)
@@ -27,8 +33,6 @@ stimSize = round(stimSize_microns / imageScalingFactor);
 FilterSize = round(FilterSize_microns / imageScalingFactor);
 SubunitRadius = round(SubunitRadius_microns / imageScalingFactor);
 CenterRadius = round(CenterRadius_microns / imageScalingFactor);
-
-disp(FilterSize)
 
 % create RF component filters
 % subunit locations - square grid
@@ -127,7 +131,7 @@ modelParameters.FilterSize = FilterSize;
 modelParameters.SubunitRadius = SubunitRadius;
 modelParameters.CenterRadius = CenterRadius;
 
-save('NaturalImageFlashLibrary_big_110116.mat','imageData','modelParameters');
+save('NaturalImageFlashLibrary_110316.mat','imageData','modelParameters');
 
 %% Code like the following in protocols to do biased sampling:
 noBins = 50; %from no. image patches to show
