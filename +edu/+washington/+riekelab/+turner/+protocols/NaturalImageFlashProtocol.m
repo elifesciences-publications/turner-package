@@ -109,24 +109,24 @@ classdef (Abstract) NaturalImageFlashProtocol < edu.washington.riekelab.protocol
             %is the size of a circle to mask off before integration.
             %e.g. center RF (Linear equivalent disc): innerDiameter = 0
             %   surround RF (Linear equivalent annulus): innerDiameter > 0
-            stimSize_VHpix = obj.screenSize ./ (3.3); %um / (um/pixel) -> pixel
+            stimSize_VHpix = obj.screenSize ./ (6.6); %um / (um/pixel) -> pixel
             radX = floor(stimSize_VHpix(1) / 2); %boundaries for fixation draws depend on stimulus size
             radY = floor(stimSize_VHpix(2) / 2);
             
             % Get the model RF:
-            RFsigma = RFsigma ./ 3.3; %microns -> VH pixels
+            RFsigma = RFsigma ./ 6.6; %microns -> VH pixels
             RF = fspecial('gaussian',2.*[radX radY],RFsigma);
 
             % Get the aperture to apply to the image...
             %   set to 1 = values to be included (i.e. image is shown there)
             [rr, cc] = meshgrid(1:(2*radX),1:(2*radY));
             apertureMatrix = sqrt((rr-radX).^2 + ...
-                (cc-radY).^2) < (outerDiameter/2) ./ 3.3;
+                (cc-radY).^2) < (outerDiameter/2) ./ 6.6;
             apertureMatrix = apertureMatrix';
             
             if innerDiameter > 0
                 maskMatrix = sqrt((rr-radX).^2 + ...
-                    (cc-radY).^2) > (innerDiameter/2) ./ 3.3;
+                    (cc-radY).^2) > (innerDiameter/2) ./ 6.6;
                 maskMatrix = maskMatrix';
                 apertureMatrix = min(maskMatrix,apertureMatrix); 
             end
@@ -151,7 +151,7 @@ classdef (Abstract) NaturalImageFlashProtocol < edu.washington.riekelab.protocol
         end
         function imagePatchMatrix =  getImagePatchMatrix(obj,currentPatchLocation)
             %imagePatchMatrix is in VH pixels
-            stimSize_VHpix = obj.screenSize ./ (3.3); %um / (um/pixel) -> pixel
+            stimSize_VHpix = obj.screenSize ./ (6.6); %um / (um/pixel) -> pixel
             radX = floor(stimSize_VHpix(1) / 2);
             radY = floor(stimSize_VHpix(2) / 2);
             imagePatchMatrix = obj.wholeImageMatrix(round(currentPatchLocation(1)-radX)+1:round(currentPatchLocation(1)+radX),...
