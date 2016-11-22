@@ -22,6 +22,7 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.turner.protocols
         surroundEquivalentIntensityValues
         
         %saved out to each epoch...
+        imagePatchIndex
         currentPatchLocation
         equivalentCenterIntensity
         equivalentSurroundIntensity
@@ -67,20 +68,21 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.turner.protocols
             surroundStims = {'none','Image','Image','none','Equiv','Equiv','Equiv','Image'};
             
             %pull patch location, equivalent intensities, and stim type tags:
-            imagePatchIndex = floor(mod(obj.numEpochsCompleted/8,obj.noPatches) + 1);
+            obj.imagePatchIndex = floor(mod(obj.numEpochsCompleted/8,obj.noPatches) + 1);
             stimInd = mod(obj.numEpochsCompleted,8);
             obj.currentCenter = centerStims{stimInd + 1};
             obj.currentSurround = surroundStims{stimInd + 1};
             
-            obj.currentPatchLocation(1) = obj.patchLocations(1,imagePatchIndex); %in VH pixels
-            obj.currentPatchLocation(2) = obj.patchLocations(2,imagePatchIndex);
-            obj.equivalentCenterIntensity = obj.centerEquivalentIntensityValues(imagePatchIndex);
-            obj.equivalentSurroundIntensity = obj.surroundEquivalentIntensityValues(imagePatchIndex);
+            obj.currentPatchLocation(1) = obj.patchLocations(1,obj.imagePatchIndex); %in VH pixels
+            obj.currentPatchLocation(2) = obj.patchLocations(2,obj.imagePatchIndex);
+            obj.equivalentCenterIntensity = obj.centerEquivalentIntensityValues(obj.imagePatchIndex);
+            obj.equivalentSurroundIntensity = obj.surroundEquivalentIntensityValues(obj.imagePatchIndex);
             
             obj.imagePatchMatrix = ...
                 edu.washington.riekelab.turner.protocols.NaturalImageFlashProtocol.getImagePatchMatrix(...
                 obj, obj.currentPatchLocation);
 
+            epoch.addParameter('imagePatchIndex', obj.imagePatchIndex);
             epoch.addParameter('currentPatchLocation', obj.currentPatchLocation);
             epoch.addParameter('equivalentCenterIntensity', obj.equivalentCenterIntensity);
             epoch.addParameter('equivalentSurroundIntensity', obj.equivalentSurroundIntensity);

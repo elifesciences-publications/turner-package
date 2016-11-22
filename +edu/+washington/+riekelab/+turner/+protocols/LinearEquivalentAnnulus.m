@@ -21,6 +21,7 @@ classdef LinearEquivalentAnnulus < edu.washington.riekelab.turner.protocols.Natu
         allEquivalentIntensityValues
         
         %saved out to each epoch...
+        imagePatchIndex
         currentPatchLocation
         equivalentIntensity
         stimulusTag
@@ -61,7 +62,7 @@ classdef LinearEquivalentAnnulus < edu.washington.riekelab.turner.protocols.Natu
             epoch.addResponse(device);
 
             %pull patch location and equivalent contrast:
-            imagePatchIndex = floor(mod(obj.numEpochsCompleted/2,obj.noPatches) + 1);
+            obj.imagePatchIndex = floor(mod(obj.numEpochsCompleted/2,obj.noPatches) + 1);
             evenInd = mod(obj.numEpochsCompleted,2);
             if evenInd == 1 %even, show uniform linear equivalent intensity
                 obj.stimulusTag = 'intensity';
@@ -69,14 +70,15 @@ classdef LinearEquivalentAnnulus < edu.washington.riekelab.turner.protocols.Natu
                 obj.stimulusTag = 'image';
             end
             
-            obj.currentPatchLocation(1) = obj.patchLocations(1,imagePatchIndex); %in VH pixels
-            obj.currentPatchLocation(2) = obj.patchLocations(2,imagePatchIndex);
-            obj.equivalentIntensity = obj.allEquivalentIntensityValues(imagePatchIndex);
+            obj.currentPatchLocation(1) = obj.patchLocations(1,obj.imagePatchIndex); %in VH pixels
+            obj.currentPatchLocation(2) = obj.patchLocations(2,obj.imagePatchIndex);
+            obj.equivalentIntensity = obj.allEquivalentIntensityValues(obj.imagePatchIndex);
 
             obj.imagePatchMatrix = ...
                 edu.washington.riekelab.turner.protocols.NaturalImageFlashProtocol.getImagePatchMatrix(...
                 obj, obj.currentPatchLocation);
 
+            epoch.addParameter('imagePatchIndex', obj.imagePatchIndex);
             epoch.addParameter('currentPatchLocation', obj.currentPatchLocation);
             epoch.addParameter('equivalentIntensity', obj.equivalentIntensity);
             epoch.addParameter('stimulusTag', obj.stimulusTag);

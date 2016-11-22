@@ -14,6 +14,7 @@ classdef NatImageCSAdditivity < edu.washington.riekelab.turner.protocols.Natural
     
     properties (Hidden)
         %saved out to each epoch...
+        imagePatchIndex
         currentPatchLocation
         currentStimulus
     end
@@ -44,7 +45,7 @@ classdef NatImageCSAdditivity < edu.washington.riekelab.turner.protocols.Natural
             epoch.addResponse(device);
             
             %pull patch location:
-            imagePatchIndex = floor(mod(obj.numEpochsCompleted/3,obj.noPatches) + 1);
+            obj.imagePatchIndex = floor(mod(obj.numEpochsCompleted/3,obj.noPatches) + 1);
             stimInd = mod(obj.numEpochsCompleted,3);
             if stimInd == 0
                 obj.currentStimulus = 'Center';
@@ -54,13 +55,14 @@ classdef NatImageCSAdditivity < edu.washington.riekelab.turner.protocols.Natural
                 obj.currentStimulus = 'Center-Surround';
             end
             
-            obj.currentPatchLocation(1) = obj.patchLocations(1,imagePatchIndex); %in VH pixels
-            obj.currentPatchLocation(2) = obj.patchLocations(2,imagePatchIndex);
+            obj.currentPatchLocation(1) = obj.patchLocations(1,obj.imagePatchIndex); %in VH pixels
+            obj.currentPatchLocation(2) = obj.patchLocations(2,obj.imagePatchIndex);
 
             obj.imagePatchMatrix = ...
                 edu.washington.riekelab.turner.protocols.NaturalImageFlashProtocol.getImagePatchMatrix(...
                 obj, obj.currentPatchLocation);
 
+            epoch.addParameter('imagePatchIndex', obj.imagePatchIndex);
             epoch.addParameter('currentPatchLocation', obj.currentPatchLocation);
             epoch.addParameter('currentStimulus', obj.currentStimulus);
         end
