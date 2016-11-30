@@ -1,8 +1,8 @@
-classdef OldSliceWithDynamicClampAndMicrodisplay < edu.washington.riekelab.rigs.OldSliceWithMicrodisplay
+classdef ConfocalWithDynamicClampAndMicrodisplayBelow < edu.washington.riekelab.rigs.ConfocalWithMicrodisplayBelow
     
     methods
         
-        function obj = OldSliceWithDynamicClampAndMicrodisplay()
+        function obj = ConfocalWithDynamicClampAndMicrodisplayBelow()
             import symphonyui.builtin.daqs.*;
             import symphonyui.builtin.devices.*;
             import symphonyui.core.*;
