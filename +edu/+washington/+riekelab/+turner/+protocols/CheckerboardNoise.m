@@ -9,7 +9,6 @@ classdef CheckerboardNoise < edu.washington.riekelab.protocols.RiekeLabStageProt
         noiseStdv = 0.3 %contrast, as fraction of mean
         frameDwell = 1 % Frames per noise update
         useRandomSeed = true % false = repeated noise trajectory (seed 0)
-        centerOffset = [0,0];
         backgroundIntensity = 0.5 % (0-1)
         onlineAnalysis = 'none'
         numberOfAverages = uint16(20) % number of epochs to queue
@@ -81,13 +80,12 @@ classdef CheckerboardNoise < edu.washington.riekelab.protocols.RiekeLabStageProt
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
             
             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
-            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
             
             % Create checkerboard
             initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(obj.numChecksY,obj.numChecksX)));
             board = stage.builtin.stimuli.Image(initMatrix);
             board.size = canvasSize;
-            board.position = canvasSize/2 + centerOffsetPix;
+            board.position = canvasSize/2;
             board.setMinFunction(GL.NEAREST); %don't interpolate to scale up board
             board.setMagFunction(GL.NEAREST);
             p.addStimulus(board);

@@ -9,7 +9,6 @@ classdef NatImageSaccade < edu.washington.riekelab.protocols.RiekeLabStageProtoc
         imageName = '00152' %van hateren image names
         saccadeTrajectory = 'full' 
         seed = 1 % rand seed for trajectory start/end points
-        centerOffset = [0, 0] % [x,y] (um)
         apertureDiameter = 0 % um
         maskDiameter = 0 % um
         scalingFactor = 2 % arcmin/pixel of VH image
@@ -26,7 +25,6 @@ classdef NatImageSaccade < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             '03347','03447','03584','03758','03760'})
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
         saccadeTrajectoryType = symphonyui.core.PropertyType('char', 'row', {'full','jump'})
-        centerOffsetType = symphonyui.core.PropertyType('denserealdouble', 'matrix')
         backgroundIntensity
         imageMatrix
         xTraj
@@ -120,7 +118,6 @@ classdef NatImageSaccade < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             
             maskDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.maskDiameter);
             apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
-            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
             
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3);
             p.setBackgroundColor(obj.backgroundIntensity);
@@ -133,7 +130,7 @@ classdef NatImageSaccade < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             %canvasPix = (VHpix) * (um/VHpix)/(um/canvasPix)
             scene.size = [size(obj.imageMatrix,2) * (obj.scalingFactor .* 3.3)/obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'),...
                 size(obj.imageMatrix,1) * (obj.scalingFactor .* 3.3)/obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel')];
-            p0 = canvasSize/2 + centerOffsetPix;
+            p0 = canvasSize/2;
             scene.position = p0;
             
             % Use linear interpolation when scaling the image.
@@ -168,7 +165,7 @@ classdef NatImageSaccade < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             
             if (obj.apertureDiameter > 0) %% Create aperture
                 aperture = stage.builtin.stimuli.Rectangle();
-                aperture.position = canvasSize/2 + centerOffsetPix;
+                aperture.position = canvasSize/2;
                 aperture.color = obj.backgroundIntensity;
                 aperture.size = [apertureDiameterPix, apertureDiameterPix];
                 mask = stage.core.Mask.createCircularAperture(1, 1024); %circular aperture
@@ -178,7 +175,7 @@ classdef NatImageSaccade < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             
             if (obj.maskDiameter > 0) % Create mask
                 mask = stage.builtin.stimuli.Ellipse();
-                mask.position = canvasSize/2 + centerOffsetPix;
+                mask.position = canvasSize/2;
                 mask.color = obj.backgroundIntensity;
                 mask.radiusX = maskDiameterPix/2;
                 mask.radiusY = maskDiameterPix/2;

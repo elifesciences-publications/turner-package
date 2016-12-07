@@ -75,12 +75,11 @@ classdef NatImageCSAdditivity < edu.washington.riekelab.turner.protocols.Natural
             centerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.centerDiameter);
             annulusInnerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusInnerDiameter);
             annulusOuterDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusOuterDiameter);
-            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
             
             %make image patch:
             scene = stage.builtin.stimuli.Image(obj.imagePatchMatrix);
             scene.size = canvasSize; %scale up to canvas size
-            scene.position = canvasSize/2 + centerOffsetPix;
+            scene.position = canvasSize/2;
             % Use linear interpolation when scaling the image.
             scene.setMinFunction(GL.LINEAR);
             scene.setMagFunction(GL.LINEAR);
@@ -92,7 +91,7 @@ classdef NatImageCSAdditivity < edu.washington.riekelab.turner.protocols.Natural
             % occlude with appropriate aperture / mask / annulus
             if strcmp(obj.currentStimulus,'Center') %aperture around center
                 aperture = stage.builtin.stimuli.Rectangle();
-                aperture.position = canvasSize/2 + centerOffsetPix;
+                aperture.position = canvasSize/2;
                 aperture.color = obj.backgroundIntensity;
                 aperture.size = [max(canvasSize) max(canvasSize)];
                 mask = stage.core.Mask.createCircularAperture(centerDiameterPix/max(canvasSize), 1024);
@@ -101,7 +100,7 @@ classdef NatImageCSAdditivity < edu.washington.riekelab.turner.protocols.Natural
             elseif strcmp(obj.currentStimulus,'Surround') %aperture in far surround + mask in center
                 % big aperture:
                 aperture = stage.builtin.stimuli.Rectangle();
-                aperture.position = canvasSize/2 + centerOffsetPix;
+                aperture.position = canvasSize/2;
                 aperture.color = obj.backgroundIntensity;
                 aperture.size = [max(canvasSize) max(canvasSize)];
                 mask = stage.core.Mask.createCircularAperture(annulusOuterDiameterPix/max(canvasSize), 1024);
@@ -111,13 +110,13 @@ classdef NatImageCSAdditivity < edu.washington.riekelab.turner.protocols.Natural
                 maskSpot = stage.builtin.stimuli.Ellipse();
                 maskSpot.radiusX = annulusInnerDiameterPix/2;
                 maskSpot.radiusY = annulusInnerDiameterPix/2;
-                maskSpot.position = canvasSize/2 + centerOffsetPix;
+                maskSpot.position = canvasSize/2;
                 maskSpot.color = obj.backgroundIntensity;
                 p.addStimulus(maskSpot);
             elseif strcmp(obj.currentStimulus,'Center-Surround') %annulus between center & surround
                 % big aperture:
                 aperture = stage.builtin.stimuli.Rectangle();
-                aperture.position = canvasSize/2 + centerOffsetPix;
+                aperture.position = canvasSize/2;
                 aperture.color = obj.backgroundIntensity;
                 aperture.size = [max(canvasSize) max(canvasSize)];
                 mask = stage.core.Mask.createCircularAperture(annulusOuterDiameterPix/max(canvasSize), 1024);
@@ -126,7 +125,7 @@ classdef NatImageCSAdditivity < edu.washington.riekelab.turner.protocols.Natural
                 
                 %annulus between center & surround:
                 annulus = stage.builtin.stimuli.Rectangle();
-                annulus.position = canvasSize/2 + centerOffsetPix;
+                annulus.position = canvasSize/2;
                 annulus.color = obj.backgroundIntensity;
                 annulus.size = [max(canvasSize) max(canvasSize)];
                 mask = stage.core.Mask.createAnnulus(centerDiameterPix/max(canvasSize),...

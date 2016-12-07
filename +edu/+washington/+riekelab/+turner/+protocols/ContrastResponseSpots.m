@@ -9,7 +9,6 @@ classdef ContrastResponseSpots < edu.washington.riekelab.protocols.RiekeLabStage
         maskDiameter = 0 % um
         randomizeOrder = false
         backgroundIntensity = 0.5 % (0-1)
-        centerOffset = [0, 0] % [x,y] (um)
         onlineAnalysis = 'none'
         numberOfAverages = uint16(40) % number of epochs to queue
         amp % Output amplifier
@@ -121,7 +120,6 @@ classdef ContrastResponseSpots < edu.washington.riekelab.protocols.RiekeLabStage
             
             %convert from microns to pixels...
             spotDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.spotDiameter);
-            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
             maskDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.maskDiameter);
             
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
@@ -132,12 +130,12 @@ classdef ContrastResponseSpots < edu.washington.riekelab.protocols.RiekeLabStage
             spot.color = obj.backgroundIntensity + (obj.backgroundIntensity*obj.currentSpotContrast);
             spot.radiusX = spotDiameterPix/2;
             spot.radiusY = spotDiameterPix/2;
-            spot.position = canvasSize/2 + centerOffsetPix;
+            spot.position = canvasSize/2;
             p.addStimulus(spot);
             
             if (obj.maskDiameter > 0) % Create mask
                 mask = stage.builtin.stimuli.Ellipse();
-                mask.position = canvasSize/2 + centerOffsetPix;
+                mask.position = canvasSize/2;
                 mask.color = obj.backgroundIntensity;
                 mask.radiusX = maskDiameterPix/2;
                 mask.radiusY = maskDiameterPix/2;

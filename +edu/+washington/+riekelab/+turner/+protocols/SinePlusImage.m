@@ -14,7 +14,6 @@ classdef SinePlusImage < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         imageName = '00152' %van hateren image names
         seed = 1 % rand seed for picking image patch
 
-        centerOffset = [0, 0] % [x,y] (um)
         onlineAnalysis = 'none'
         numberOfAverages = uint16(9) % number of epochs to queue
         amp % Output amplifier
@@ -23,7 +22,6 @@ classdef SinePlusImage < edu.washington.riekelab.protocols.RiekeLabStageProtocol
     properties (Hidden)
         ampType
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
-        centerOffsetType = symphonyui.core.PropertyType('denserealdouble', 'matrix')
         imageNameType = symphonyui.core.PropertyType('char', 'row', {'00152','00377','00405','00459','00657','01151','01154',...
             '01192','01769','01829','02265','02281','02733','02999','03093',...
             '03347','03447','03584','03758','03760'})
@@ -132,7 +130,6 @@ classdef SinePlusImage < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             
             %convert from microns to pixels...
             spotDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.spotDiameter);
-            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
             annulusInnerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusInnerDiameter);
             annulusOuterDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusOuterDiameter);
             
@@ -142,7 +139,7 @@ classdef SinePlusImage < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             % Create image stimulus
             scene = stage.builtin.stimuli.Image(obj.imagePatchMatrix);
             scene.size = canvasSize; %scale up to canvas size
-            scene.position = canvasSize/2 + centerOffsetPix;
+            scene.position = canvasSize/2;
             % Use linear interpolation when scaling the image.
             scene.setMinFunction(GL.LINEAR);
             scene.setMagFunction(GL.LINEAR);
@@ -171,7 +168,7 @@ classdef SinePlusImage < edu.washington.riekelab.protocols.RiekeLabStageProtocol
 
             % Create aperture stimulus (outer edge of annulus)
             aperture = stage.builtin.stimuli.Rectangle();
-            aperture.position = canvasSize/2 + centerOffsetPix;
+            aperture.position = canvasSize/2;
             aperture.color = obj.backgroundIntensity;
             aperture.size = [max(canvasSize) max(canvasSize)];
             mask = stage.core.Mask.createCircularAperture(annulusOuterDiameterPix/max(canvasSize), 1024); %circular aperture
@@ -179,7 +176,7 @@ classdef SinePlusImage < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             p.addStimulus(aperture);
             % Create aperture stimulus (inner edge of annulus)
             mask = stage.builtin.stimuli.Ellipse();
-            mask.position = canvasSize/2 + centerOffsetPix;
+            mask.position = canvasSize/2;
             mask.color = obj.backgroundIntensity;
             mask.radiusX = annulusInnerDiameterPix/2;
             mask.radiusY = annulusInnerDiameterPix/2;
@@ -189,7 +186,7 @@ classdef SinePlusImage < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             spot = stage.builtin.stimuli.Ellipse();
             spot.radiusX = spotDiameterPix/2;
             spot.radiusY = spotDiameterPix/2;
-            spot.position = canvasSize/2 + centerOffsetPix;
+            spot.position = canvasSize/2;
             p.addStimulus(spot);
             %make it contrast-reversing
             if (obj.temporalFrequency > 0) 

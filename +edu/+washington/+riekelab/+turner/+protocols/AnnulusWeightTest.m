@@ -11,7 +11,6 @@ classdef AnnulusWeightTest < edu.washington.riekelab.protocols.RiekeLabStageProt
         rfSigmaSurround = 180 % (um)
         annulusIntensity = 1.0             % (0-1)
         backgroundIntensity = 0.5       % Background light intensity (0-1)
-        centerOffset = [0, 0]           % center offset (um)
         onlineAnalysis = 'none'
         numberOfAverages = uint16(15)    % Number of epochs
         amp                             % Output amplifier
@@ -116,7 +115,6 @@ classdef AnnulusWeightTest < edu.washington.riekelab.protocols.RiekeLabStageProt
             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
-            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
             centerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.centerDiameter);
             
             if ~strcmp(obj.currentStimulusType,'Center')
@@ -132,7 +130,7 @@ classdef AnnulusWeightTest < edu.washington.riekelab.protocols.RiekeLabStageProt
                 annulus.color = obj.annulusIntensity;
                 annulus.radiusX = outerDiameterPix/2;
                 annulus.radiusY = outerDiameterPix/2;
-                annulus.position = canvasSize/2 + centerOffsetPix;
+                annulus.position = canvasSize/2;
                 p.addStimulus(annulus);
                 annulusVisible = stage.builtin.controllers.PropertyController(annulus, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
@@ -142,7 +140,7 @@ classdef AnnulusWeightTest < edu.washington.riekelab.protocols.RiekeLabStageProt
                 maskSpot.color = obj.backgroundIntensity;
                 maskSpot.radiusX = innerDiameterPix/2;
                 maskSpot.radiusY = innerDiameterPix/2;
-                maskSpot.position = canvasSize/2 + centerOffsetPix;
+                maskSpot.position = canvasSize/2;
                 p.addStimulus(maskSpot);
                 maskSpotVisible = stage.builtin.controllers.PropertyController(maskSpot, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
@@ -156,7 +154,7 @@ classdef AnnulusWeightTest < edu.washington.riekelab.protocols.RiekeLabStageProt
             spot.color = obj.centerIntensity;
             spot.radiusX = centerDiameterPix/2;
             spot.radiusY = centerDiameterPix/2;
-            spot.position = canvasSize/2 + centerOffsetPix;
+            spot.position = canvasSize/2;
             p.addStimulus(spot);
             spotVisible = stage.builtin.controllers.PropertyController(spot, 'visible', ...
                 @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);

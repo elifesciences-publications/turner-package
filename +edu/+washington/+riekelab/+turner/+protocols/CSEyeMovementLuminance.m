@@ -8,7 +8,6 @@ classdef CSEyeMovementLuminance < edu.washington.riekelab.protocols.RiekeLabStag
         centerDiameter = 200 % um
         annulusInnerDiameter = 300 % um
         annulusOuterDiameter = 600 % um
-        centerOffset = [0, 0] %[x, y] um
         onlineAnalysis = 'none'
         numberOfAverages = uint16(15) % number of epochs to queue
         amp % Output amplifier
@@ -98,7 +97,6 @@ classdef CSEyeMovementLuminance < edu.washington.riekelab.protocols.RiekeLabStag
             centerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.centerDiameter);
             annulusInnerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusInnerDiameter);
             annulusOuterDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusOuterDiameter);
-            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
             
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
@@ -106,7 +104,7 @@ classdef CSEyeMovementLuminance < edu.washington.riekelab.protocols.RiekeLabStag
                 surroundSpot = stage.builtin.stimuli.Ellipse();
                 surroundSpot.radiusX = annulusOuterDiameterPix/2;
                 surroundSpot.radiusY = annulusOuterDiameterPix/2;
-                surroundSpot.position = canvasSize/2 + centerOffsetPix;
+                surroundSpot.position = canvasSize/2;
                 p.addStimulus(surroundSpot);
                 surroundSpotIntensity = stage.builtin.controllers.PropertyController(surroundSpot, 'color',...
                     @(state)getNextIntensity(obj, state.time - obj.preTime/1e3, obj.surroundTrajectory));
@@ -119,7 +117,7 @@ classdef CSEyeMovementLuminance < edu.washington.riekelab.protocols.RiekeLabStag
                 maskSpot = stage.builtin.stimuli.Ellipse();
                 maskSpot.radiusX = annulusInnerDiameterPix/2;
                 maskSpot.radiusY = annulusInnerDiameterPix/2;
-                maskSpot.position = canvasSize/2 + centerOffsetPix;
+                maskSpot.position = canvasSize/2;
                 maskSpot.color = obj.backgroundIntensity;
                 p.addStimulus(maskSpot);
             end
@@ -127,7 +125,7 @@ classdef CSEyeMovementLuminance < edu.washington.riekelab.protocols.RiekeLabStag
                 centerSpot = stage.builtin.stimuli.Ellipse();
                 centerSpot.radiusX = centerDiameterPix/2;
                 centerSpot.radiusY = centerDiameterPix/2;
-                centerSpot.position = canvasSize/2 + centerOffsetPix;
+                centerSpot.position = canvasSize/2;
                 p.addStimulus(centerSpot);
                 centerSpotIntensity = stage.builtin.controllers.PropertyController(centerSpot, 'color',...
                     @(state)getNextIntensity(obj, state.time - obj.preTime/1e3, obj.centerTrajectory));

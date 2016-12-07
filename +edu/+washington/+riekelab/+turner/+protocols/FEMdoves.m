@@ -6,7 +6,6 @@ classdef FEMdoves < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         tailTime = 250 % ms
         stimulusIndex = 1 % DOVES subject/image
         freezeFEMs = false
-        centerOffset = [0, 0] % [x,y] (um)
         apertureDiameter = 0 % um
         maskDiameter = 0 % um
         onlineAnalysis = 'none'
@@ -17,7 +16,6 @@ classdef FEMdoves < edu.washington.riekelab.protocols.RiekeLabStageProtocol
     properties (Hidden)
         ampType
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
-        centerOffsetType = symphonyui.core.PropertyType('denserealdouble', 'matrix')
         backgroundIntensity
         imageMatrix
         xTraj
@@ -92,7 +90,6 @@ classdef FEMdoves < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             
             maskDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.maskDiameter);
             apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
-            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
             
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3);
             p.setBackgroundColor(obj.backgroundIntensity);
@@ -105,7 +102,7 @@ classdef FEMdoves < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             %canvasPix = (VHpix) * (um/VHpix)/(um/canvasPix)
             scene.size = [size(obj.imageMatrix,2) * 3.3/obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'),...
                 size(obj.imageMatrix,1) * 3.3/obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel')];
-            p0 = canvasSize/2 + centerOffsetPix;
+            p0 = canvasSize/2;
             scene.position = p0;
             
             % Use linear interpolation when scaling the image.
@@ -139,7 +136,7 @@ classdef FEMdoves < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             
             if (obj.apertureDiameter > 0) %% Create aperture
                 aperture = stage.builtin.stimuli.Rectangle();
-                aperture.position = canvasSize/2 + centerOffsetPix;
+                aperture.position = canvasSize/2;
                 aperture.color = obj.backgroundIntensity;
                 aperture.size = [apertureDiameterPix, apertureDiameterPix];
                 mask = stage.core.Mask.createCircularAperture(1, 1024); %circular aperture
@@ -149,7 +146,7 @@ classdef FEMdoves < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             
             if (obj.maskDiameter > 0) % Create mask
                 mask = stage.builtin.stimuli.Ellipse();
-                mask.position = canvasSize/2 + centerOffsetPix;
+                mask.position = canvasSize/2;
                 mask.color = obj.backgroundIntensity;
                 mask.radiusX = maskDiameterPix/2;
                 mask.radiusY = maskDiameterPix/2;

@@ -7,7 +7,6 @@ classdef (Abstract) NaturalImageFlashProtocol < edu.washington.riekelab.protocol
         patchSampling = 'random'
         patchContrast = 'all'
         
-        centerOffset = [0, 0] % [x,y] (um)
         onlineAnalysis = 'none'
         amp % Output amplifier
     end
@@ -20,7 +19,6 @@ classdef (Abstract) NaturalImageFlashProtocol < edu.washington.riekelab.protocol
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
         patchSamplingType = symphonyui.core.PropertyType('char', 'row', {'random','ranked'})
         patchContrastType = symphonyui.core.PropertyType('char', 'row', {'all','negative','positive'})
-        centerOffsetType = symphonyui.core.PropertyType('denserealdouble', 'matrix')
         
         screenSize
         wholeImageMatrix

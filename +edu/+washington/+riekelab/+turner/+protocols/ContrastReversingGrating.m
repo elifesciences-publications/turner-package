@@ -11,7 +11,6 @@ classdef ContrastReversingGrating < edu.washington.riekelab.protocols.RiekeLabSt
         barWidth = [5 10 20 40 80 160] % um
         rotation = 0; % deg
         backgroundIntensity = 0.5 % (0-1)
-        centerOffset = [0, 0] % [x,y] (um)
         randomizeOrder = false;
         onlineAnalysis = 'none'
         numberOfAverages = uint16(20) % number of epochs to queue
@@ -129,7 +128,6 @@ classdef ContrastReversingGrating < edu.washington.riekelab.protocols.RiekeLabSt
             
             %convert from microns to pixels...
             apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
-            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
             maskDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.maskDiameter);
             currentBarWidthPix = obj.rig.getDevice('Stage').um2pix(obj.currentBarWidth);
             
@@ -140,7 +138,7 @@ classdef ContrastReversingGrating < edu.washington.riekelab.protocols.RiekeLabSt
             grate = stage.builtin.stimuli.Grating('square'); %square wave grating
             grate.orientation = obj.rotation;
             grate.size = [apertureDiameterPix, apertureDiameterPix];
-            grate.position = canvasSize/2 + centerOffsetPix;
+            grate.position = canvasSize/2;
             grate.spatialFreq = 1/(2*currentBarWidthPix); %convert from bar width to spatial freq
             grate.color = 2*obj.backgroundIntensity;
             %calc to apply phase shift s.t. a contrast-reversing boundary
@@ -167,7 +165,7 @@ classdef ContrastReversingGrating < edu.washington.riekelab.protocols.RiekeLabSt
             
             if  (obj.apertureDiameter > 0) % Create aperture
                 aperture = stage.builtin.stimuli.Rectangle();
-                aperture.position = canvasSize/2 + centerOffsetPix;
+                aperture.position = canvasSize/2;
                 aperture.color = obj.backgroundIntensity;
                 aperture.size = [apertureDiameterPix, apertureDiameterPix];
                 mask = stage.core.Mask.createCircularAperture(1, 1024); %circular aperture
@@ -177,7 +175,7 @@ classdef ContrastReversingGrating < edu.washington.riekelab.protocols.RiekeLabSt
             
             if (obj.maskDiameter > 0) % Create mask
                 mask = stage.builtin.stimuli.Ellipse();
-                mask.position = canvasSize/2 + centerOffsetPix;
+                mask.position = canvasSize/2;
                 mask.color = obj.backgroundIntensity;
                 mask.radiusX = maskDiameterPix/2;
                 mask.radiusY = maskDiameterPix/2;

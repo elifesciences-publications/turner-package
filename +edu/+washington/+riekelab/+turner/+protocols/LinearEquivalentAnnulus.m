@@ -92,12 +92,11 @@ classdef LinearEquivalentAnnulus < edu.washington.riekelab.turner.protocols.Natu
             annulusInnerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusInnerDiameter);
             annulusOuterDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusOuterDiameter);
             centerSpotDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.centerSpotDiameter);
-            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
 
             if strcmp(obj.stimulusTag,'image')
                 scene = stage.builtin.stimuli.Image(obj.imagePatchMatrix);
                 scene.size = canvasSize; %scale up to canvas size
-                scene.position = canvasSize/2 + centerOffsetPix;
+                scene.position = canvasSize/2;
                 % Use linear interpolation when scaling the image.
                 scene.setMinFunction(GL.LINEAR);
                 scene.setMagFunction(GL.LINEAR);
@@ -109,7 +108,7 @@ classdef LinearEquivalentAnnulus < edu.washington.riekelab.turner.protocols.Natu
                 scene = stage.builtin.stimuli.Rectangle();
                 scene.size = canvasSize;
                 scene.color = obj.equivalentIntensity;
-                scene.position = canvasSize/2 + centerOffsetPix;
+                scene.position = canvasSize/2;
                 p.addStimulus(scene);
                 sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
@@ -119,7 +118,7 @@ classdef LinearEquivalentAnnulus < edu.washington.riekelab.turner.protocols.Natu
             
             if (obj.annulusOuterDiameter > 0) %% Create aperture
                 aperture = stage.builtin.stimuli.Rectangle();
-                aperture.position = canvasSize/2 + centerOffsetPix;
+                aperture.position = canvasSize/2;
                 aperture.color = obj.backgroundIntensity;
                 aperture.size = [max(canvasSize) max(canvasSize)];
                 mask = stage.core.Mask.createCircularAperture(annulusOuterDiameterPix/max(canvasSize), 1024); %circular aperture
@@ -129,7 +128,7 @@ classdef LinearEquivalentAnnulus < edu.washington.riekelab.turner.protocols.Natu
             
             if (obj.annulusInnerDiameter > 0) % Create mask
                 mask = stage.builtin.stimuli.Ellipse();
-                mask.position = canvasSize/2 + centerOffsetPix;
+                mask.position = canvasSize/2;
                 mask.color = obj.backgroundIntensity;
                 mask.radiusX = annulusInnerDiameterPix/2;
                 mask.radiusY = annulusInnerDiameterPix/2;
@@ -142,7 +141,7 @@ classdef LinearEquivalentAnnulus < edu.washington.riekelab.turner.protocols.Natu
                     obj.backgroundIntensity * obj.centerSpotContrast;
                 spot.radiusX = centerSpotDiameterPix/2;
                 spot.radiusY = centerSpotDiameterPix/2;
-                spot.position = canvasSize/2 + centerOffsetPix;
+                spot.position = canvasSize/2;
                 p.addStimulus(spot);
                 
                 spotVisible = stage.builtin.controllers.PropertyController(spot, 'visible', ...

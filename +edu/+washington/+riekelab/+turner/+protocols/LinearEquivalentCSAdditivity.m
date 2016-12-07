@@ -98,8 +98,6 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.turner.protocols
             centerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.centerDiameter);
             annulusInnerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusInnerDiameter);
             annulusOuterDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusOuterDiameter);
-            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
-
             
             if strcmp(obj.currentCenter,'Image')
                 makeScene(obj);
@@ -139,7 +137,7 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.turner.protocols
             function makeScene(obj)
                 scene = stage.builtin.stimuli.Image(obj.imagePatchMatrix);
                 scene.size = canvasSize; %scale up to canvas size
-                scene.position = canvasSize/2 + centerOffsetPix;
+                scene.position = canvasSize/2;
                 % Use linear interpolation when scaling the image.
                 scene.setMinFunction(GL.LINEAR);
                 scene.setMagFunction(GL.LINEAR);
@@ -150,7 +148,7 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.turner.protocols
             end
             function makeAnnulusMask(obj)
                 annulus = stage.builtin.stimuli.Rectangle();
-                annulus.position = canvasSize/2 + centerOffsetPix;
+                annulus.position = canvasSize/2;
                 annulus.color = obj.backgroundIntensity;
                 annulus.size = [max(canvasSize) max(canvasSize)];
                 mask = stage.core.Mask.createAnnulus(centerDiameterPix/max(canvasSize),...
@@ -160,7 +158,7 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.turner.protocols
             end
             function makeAnnulus(~,intensity)
                 rect = stage.builtin.stimuli.Rectangle();
-                rect.position = canvasSize/2 + centerOffsetPix;
+                rect.position = canvasSize/2;
                 rect.color = intensity;
                 rect.size = [max(canvasSize) max(canvasSize)];
                 
@@ -177,7 +175,7 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.turner.protocols
             end
             function makeAperture(obj, apertureDiameter)
                 aperture = stage.builtin.stimuli.Rectangle();
-                aperture.position = canvasSize/2 + centerOffsetPix;
+                aperture.position = canvasSize/2;
                 aperture.color = obj.backgroundIntensity;
                 aperture.size = [max(canvasSize) max(canvasSize)];
                 mask = stage.core.Mask.createCircularAperture(apertureDiameter/max(canvasSize), 1024);
@@ -188,7 +186,7 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.turner.protocols
                 maskSpot = stage.builtin.stimuli.Ellipse();
                 maskSpot.radiusX = annulusInnerDiameterPix/2;
                 maskSpot.radiusY = annulusInnerDiameterPix/2;
-                maskSpot.position = canvasSize/2 + centerOffsetPix;
+                maskSpot.position = canvasSize/2;
                 maskSpot.color = obj.backgroundIntensity;
                 p.addStimulus(maskSpot);
                 maskSpotVisible = stage.builtin.controllers.PropertyController(maskSpot, 'visible', ...
@@ -199,7 +197,7 @@ classdef LinearEquivalentCSAdditivity < edu.washington.riekelab.turner.protocols
                 spot = stage.builtin.stimuli.Ellipse();
                 spot.radiusX = spotDiameter/2;
                 spot.radiusY = spotDiameter/2;
-                spot.position = canvasSize/2 + centerOffsetPix;
+                spot.position = canvasSize/2;
                 spot.color = spotColor;
                 p.addStimulus(spot);
                 spotVisible = stage.builtin.controllers.PropertyController(spot, 'visible', ...

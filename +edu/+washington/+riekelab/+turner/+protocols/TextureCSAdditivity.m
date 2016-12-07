@@ -11,7 +11,6 @@ classdef TextureCSAdditivity < edu.washington.riekelab.protocols.RiekeLabStagePr
         centerDiameter = 200 % 
         annulusInnerDiameter = 300 % um
         annulusOuterDiameter = 600 % um
-        centerOffset = [0, 0] % [x,y] (um)
         backgroundIntensity = 0.5       % Background light intensity (0-0.5)
         onlineAnalysis = 'none'
         numberOfAverages = uint16(108) % number of epochs to queue
@@ -21,7 +20,6 @@ classdef TextureCSAdditivity < edu.washington.riekelab.protocols.RiekeLabStagePr
     properties (Hidden)
         ampType
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
-        centerOffsetType = symphonyui.core.PropertyType('denserealdouble', 'matrix')
         
         centerTexture
         surroundTexture
@@ -121,7 +119,6 @@ classdef TextureCSAdditivity < edu.washington.riekelab.protocols.RiekeLabStagePr
             centerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.centerDiameter);
             annulusInnerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusInnerDiameter);
             annulusOuterDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusOuterDiameter);
-            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
 
             if strcmp(obj.currentStimulus,'Center')
                 makeCenterTexture;
@@ -137,7 +134,7 @@ classdef TextureCSAdditivity < edu.washington.riekelab.protocols.RiekeLabStagePr
                 %make center texture:
                 cTexture = stage.builtin.stimuli.Image(obj.centerTexture);
                 cTexture.size = [centerDiameterPix, centerDiameterPix];
-                cTexture.position = canvasSize/2 + centerOffsetPix;
+                cTexture.position = canvasSize/2;
                 p.addStimulus(cTexture);
                 sceneVisible = stage.builtin.controllers.PropertyController(cTexture, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
@@ -153,7 +150,7 @@ classdef TextureCSAdditivity < edu.washington.riekelab.protocols.RiekeLabStagePr
                 %make surround texture:
                 sTexture = stage.builtin.stimuli.Image(obj.surroundTexture);
                 sTexture.size = [annulusOuterDiameterPix, annulusOuterDiameterPix];
-                sTexture.position = canvasSize/2 + centerOffsetPix;
+                sTexture.position = canvasSize/2;
                 p.addStimulus(sTexture);
                 sceneVisible = stage.builtin.controllers.PropertyController(sTexture, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);

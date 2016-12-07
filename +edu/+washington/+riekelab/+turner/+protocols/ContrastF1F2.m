@@ -11,7 +11,6 @@ classdef ContrastF1F2 < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         gratingPhase = 'Alternate'
         rotation = 0 % deg
         backgroundIntensity = 0.5 % (0-1)
-        centerOffset = [0, 0] % [x,y] (um)
         onlineAnalysis = 'none'
         numberOfAverages = uint16(20) % number of epochs to queue
         amp
@@ -66,7 +65,6 @@ classdef ContrastF1F2 < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             
             %convert from microns to pixels...
             apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
-            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
             maskDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.maskDiameter);
             
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
@@ -76,7 +74,7 @@ classdef ContrastF1F2 < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             grate = stage.builtin.stimuli.Grating('square'); %square wave grating
             grate.orientation = obj.rotation;
             grate.size = [apertureDiameterPix, apertureDiameterPix];
-            grate.position = canvasSize/2 + centerOffsetPix;
+            grate.position = canvasSize/2;
             grate.spatialFreq = 1/(2*apertureDiameterPix);
             grate.color = 2*obj.backgroundIntensity; %amplitude of square wave
             grate.contrast = obj.currentContrast;
@@ -95,7 +93,7 @@ classdef ContrastF1F2 < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             
             if  (obj.apertureDiameter > 0) % Create aperture
                 aperture = stage.builtin.stimuli.Rectangle();
-                aperture.position = canvasSize/2 + centerOffsetPix;
+                aperture.position = canvasSize/2;
                 aperture.color = obj.backgroundIntensity;
                 aperture.size = [apertureDiameterPix, apertureDiameterPix];
                 mask = stage.core.Mask.createCircularAperture(1, 1024); %circular aperture
@@ -105,7 +103,7 @@ classdef ContrastF1F2 < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             
             if (obj.maskDiameter > 0) % Create mask
                 mask = stage.builtin.stimuli.Ellipse();
-                mask.position = canvasSize/2 + centerOffsetPix;
+                mask.position = canvasSize/2;
                 mask.color = obj.backgroundIntensity;
                 mask.radiusX = maskDiameterPix/2;
                 mask.radiusY = maskDiameterPix/2;

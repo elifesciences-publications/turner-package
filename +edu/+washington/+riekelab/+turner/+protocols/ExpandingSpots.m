@@ -8,7 +8,6 @@ classdef ExpandingSpots < edu.washington.riekelab.protocols.RiekeLabStageProtoco
         spotSizes = [40 80 120 160 180 200 220 240 280 320 460 600] % um
         randomizeOrder = false
         backgroundIntensity = 0.5 % (0-1)
-        centerOffset = [0, 0] % [x,y] (um)
         onlineAnalysis = 'none'
         numberOfAverages = uint16(100) % number of epochs to queue
         amp % Output amplifier
@@ -60,7 +59,6 @@ classdef ExpandingSpots < edu.washington.riekelab.protocols.RiekeLabStageProtoco
             
             %convert from microns to pixels...
             spotDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.currentSpotSize);
-            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
             
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
@@ -70,7 +68,7 @@ classdef ExpandingSpots < edu.washington.riekelab.protocols.RiekeLabStageProtoco
             spot.color = obj.spotIntensity;
             spot.radiusX = spotDiameterPix/2;
             spot.radiusY = spotDiameterPix/2;
-            spot.position = canvasSize/2 + centerOffsetPix;
+            spot.position = canvasSize/2;
             p.addStimulus(spot);
             
             % hide during pre & post
