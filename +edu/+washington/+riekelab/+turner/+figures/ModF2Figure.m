@@ -37,6 +37,8 @@ classdef ModF2Figure < symphonyui.core.FigureHandler
             obj.stimTime = ip.Results.stimTime;
             obj.flashDelay = ip.Results.flashDelay;
             obj.flashDuration = ip.Results.flashDuration;
+            obj.temporalFrequency = ip.Results.temporalFrequency;
+            obj.figureTitle = ip.Results.figureTitle;
 
             obj.createUi();
         end
@@ -59,8 +61,8 @@ classdef ModF2Figure < symphonyui.core.FigureHandler
                 'XTickMode', 'auto');
             xlabel(obj.axesHandle(2), 'Time (s)');
             ylabel(obj.axesHandle(2), 'F2/F1');
-            
             obj.figureHandle.Name = obj.figureTitle;
+            obj.lineHandle = cell(1,3);
         end
 
         function handleEpoch(obj, epoch)
@@ -72,8 +74,8 @@ classdef ModF2Figure < symphonyui.core.FigureHandler
             if strcmp(obj.recordingType,'extracellular') %spike recording
                 filterSigma = (10/1000)*sampleRate; %msec -> dataPts
                 newFilt = normpdf(1:10*filterSigma,10*filterSigma/2,filterSigma);
-                res = edu.washington.riekelab.turner.utils.spikeDetectorOnline(quantities,[],sampleRate);
-                newResponse = zeros(size(quantities));
+                res = edu.washington.riekelab.turner.utils.spikeDetectorOnline(epochResponseTrace,[],sampleRate);
+                newResponse = zeros(size(epochResponseTrace));
                 newResponse(res.sp) = 1; %spike binary
                 newResponse = sampleRate*conv(newResponse,newFilt,'same'); %inst firing rate
             else %intracellular - Vclamp
@@ -112,30 +114,31 @@ classdef ModF2Figure < symphonyui.core.FigureHandler
                 beta = nlinfit(timeVec,currentChunk,modelFun,beta0);
                 newAmp(c) = abs(beta(1));
             end
-            timeVector = (1:size(obj.F1amplitudes,2)) .* 1/obj.temporalFrequency; %sec
             if strcmp(epoch.parameters('currentStimulus'),'FullField')
                 obj.F1amplitudes = cat(1,obj.F1amplitudes,newAmp);
-                if isempty(obj.lineHandle(1))
-                    obj.lineHandle(1) = line(timeVector, mean(obj.F1amplitudes,1),...
-                    'Parent', obj.axesHandle(1),'LineWidth',2,'Color','b');
+                timeVector = (1:size(obj.F1amplitudes,2)) .* 1/obj.temporalFrequency; %sec
+                if isempty(obj.lineHandle{1})
+                    obj.lineHandle{1} = line(timeVector, mean(obj.F1amplitudes,1),...
+                    'Parent', obj.axesHandle(1),'LineWidth',2,'Color','k');
                 else
-                    set(obj.lineHandle(1), 'YData', mean(obj.F1amplitudes,1));
+                    set(obj.lineHandle{1}, 'YData', mean(obj.F1amplitudes,1));
                 end
             elseif strcmp(epoch.parameters('currentStimulus'),'SplitField')
                 obj.F2amplitudes = cat(1,obj.F2amplitudes,newAmp);
-                if isempty(obj.lineHandle(2))
-                    obj.lineHandle(2) = line(timeVector, mean(obj.F2amplitudes,1),...
+                timeVector = (1:size(obj.F1amplitudes,2)) .* 1/obj.temporalFrequency; %sec
+                if isempty(obj.lineHandle{2})
+                    obj.lineHandle{2} = line(timeVector, mean(obj.F2amplitudes,1),...
                     'Parent', obj.axesHandle(1),'LineWidth',2,'Color','r');
                 else
-                    set(obj.lineHandle(2), 'YData', mean(obj.F2amplitudes,1));
+                    set(obj.lineHandle{2}, 'YData', mean(obj.F2amplitudes,1));
                 end
                 
                 F2F1ratio = mean(obj.F2amplitudes,1) ./ mean(obj.F1amplitudes,1);
-                if isempty(obj.lineHandle(3))
-                    obj.lineHandle(3) = line(timeVector, F2F1ratio,...
-                    'Parent', obj.axesHandle(2),'LineWidth',2,'Color','r');
+                if isempty(obj.lineHandle{3})
+                    obj.lineHandle{3} = line(timeVector, F2F1ratio,...
+                    'Parent', obj.axesHandle(2),'LineWidth',2,'Color','k');
                 else
-                    set(obj.lineHandle(3), 'YData', F2F1ratio);
+                    set(obj.lineHandle{3}, 'YData', F2F1ratio);
                 end
             end
         end

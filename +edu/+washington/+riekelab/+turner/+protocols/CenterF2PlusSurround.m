@@ -7,8 +7,8 @@ classdef CenterF2PlusSurround < edu.washington.riekelab.protocols.RiekeLabStageP
         flashDelay = 500 %ms after preTime, surround flash
         flashDuration = 100 % ms, surround flash duration
         
-        temporalFrequency = 10 % Hz
-        spotDiameter = 250; % um
+        temporalFrequency = 8 % Hz
+        spotDiameter = 200; % um
         centerContrast = 0.5 %relative to mean
         
         annulusInnerDiameter = 300 % um
@@ -107,7 +107,7 @@ classdef CenterF2PlusSurround < edu.washington.riekelab.protocols.RiekeLabStageP
                 p.addController(grateContrast); %add the controller
             end
             function c = getGrateContrast(obj, time)
-                c = obj.contrast.*sin(2 * pi * obj.temporalFrequency * time);
+                c = obj.centerContrast.*sin(2 * pi * obj.temporalFrequency * time);
             end
             
             % Create aperture
@@ -125,23 +125,29 @@ classdef CenterF2PlusSurround < edu.washington.riekelab.protocols.RiekeLabStageP
             p.addController(grateVisible);
             
             % Make annulus in surround
-            annulus = stage.builtin.stimuli.Rectangle();
-            annulus.position = canvasSize/2;
-            annulus.color = obj.surroundContrast * obj.backgroundIntensity + obj.backgroundIntensity;
-            annulus.size = [max(canvasSize) max(canvasSize)];
+            rect = stage.builtin.stimuli.Rectangle();
+            rect.position = canvasSize/2;
+            rect.color = obj.surroundContrast * obj.backgroundIntensity + obj.backgroundIntensity;
+            rect.size = [max(canvasSize) max(canvasSize)];
 
             distanceMatrix = createDistanceMatrix(1024);
             annulus = uint8((distanceMatrix < annulusOuterDiameterPix/max(canvasSize) & ...
                 distanceMatrix > annulusInnerDiameterPix/max(canvasSize)) * 255);
             mask = stage.core.Mask(annulus);
 
-            annulus.setMask(mask);
-            p.addStimulus(annulus);
+            rect.setMask(mask);
+            p.addStimulus(rect);
             %show during flash period
-            annulusVisible = stage.builtin.controllers.PropertyController(annulus, 'visible', ...
+            rectVisible = stage.builtin.controllers.PropertyController(rect, 'visible', ...
                 @(state)state.time >= (obj.preTime + obj.flashDelay) * 1e-3 && state.time <...
                 (obj.preTime + obj.flashDelay + obj.flashDuration) * 1e-3);
-            p.addController(annulusVisible);
+            p.addController(rectVisible);
+            
+            function m = createDistanceMatrix(size)
+                step = 2 / (size - 1);
+                [xx, yy] = meshgrid(-1:step:1, -1:step:1);
+                m = sqrt(xx.^2 + yy.^2);
+            end
 
         end
         
