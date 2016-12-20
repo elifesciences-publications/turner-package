@@ -128,7 +128,6 @@ classdef (Abstract) NaturalImageFlashProtocol < edu.washington.riekelab.protocol
                 maskMatrix = maskMatrix';
                 apertureMatrix = min(maskMatrix,apertureMatrix); 
             end
-            2;
 
             if strcmp(obj.linearIntegrationFunction,'gaussian')
                 weightingFxn = apertureMatrix .* RF; %set to zero mean gray pixels
