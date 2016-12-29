@@ -90,7 +90,7 @@ classdef ModF2Figure < symphonyui.core.FigureHandler
             
             onsetDelay = (100/1000) * sampleRate; %msec -> data points
             noCycles = floor(obj.temporalFrequency*obj.stimTime/1000);
-            period = (1/obj.temporalFrequency)*sampleRate; %data points
+            period = round((1/obj.temporalFrequency)*sampleRate); %data points
             newResponse(1:(sampleRate*obj.preTime/1000)) = []; %cut out prePts
             
             %fit a sine to each cycle and pull out amplitude
