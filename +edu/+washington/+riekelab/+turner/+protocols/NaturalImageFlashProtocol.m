@@ -1,6 +1,6 @@
 classdef (Abstract) NaturalImageFlashProtocol < edu.washington.riekelab.protocols.RiekeLabStageProtocol
     properties
-        noPatches = 30 %number of different image patches (fixations) to show
+        noPatches = 20 %number of different image patches (fixations) to show
         
         imageName = '00152' %van hateren image names
         seed = 1 % rand seed for picking image patches
@@ -79,7 +79,7 @@ classdef (Abstract) NaturalImageFlashProtocol < edu.washington.riekelab.protocol
             if strcmp(obj.patchSampling,'random')
                 %get patch indices:
                 pullInds = randsample(1:length(xLoc),obj.noPatches);
-            else strcmp(obj.patchSampling,'ranked')
+            elseif strcmp(obj.patchSampling,'ranked')
                 %pull more than needed to account for empty bins at tail
                 [~, ~, bin] = histcounts(responseDifferences,2*obj.noPatches);
                 populatedBins = unique(bin);
