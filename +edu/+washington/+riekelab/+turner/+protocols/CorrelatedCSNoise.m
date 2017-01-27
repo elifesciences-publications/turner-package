@@ -88,6 +88,7 @@ classdef CorrelatedCSNoise < edu.washington.riekelab.protocols.RiekeLabStageProt
             elseif index == 2
                 obj.currentStimulus = 'Center-Surround';
             end
+
             epoch.addParameter('centerNoiseSeed', obj.centerNoiseSeed);
             epoch.addParameter('surroundNoiseSeed', obj.surroundNoiseSeed);
             epoch.addParameter('currentStimulus', obj.currentStimulus);
@@ -148,7 +149,7 @@ classdef CorrelatedCSNoise < edu.washington.riekelab.protocols.RiekeLabStageProt
                     intensity = obj.backgroundIntensity;
                 else %in stim frames
                     if mod(frame, obj.frameDwell) == 0 %noise update
-                        ind = frame/obj.frameDwell + 1;
+                        ind = min(frame/obj.frameDwell + 1, length(obj.centerNoiseArray));
                         intensity = obj.centerNoiseArray(ind);
                     end
                 end
@@ -161,7 +162,7 @@ classdef CorrelatedCSNoise < edu.washington.riekelab.protocols.RiekeLabStageProt
                     intensity = obj.backgroundIntensity;
                 else %in stim frames
                     if mod(frame, obj.frameDwell) == 0 %noise update
-                        ind = frame/obj.frameDwell + 1;
+                        ind = min(frame/obj.frameDwell + 1, length(obj.surroundNoiseArray));
                         intensity = obj.surroundNoiseArray(ind);
                     end
                 end
