@@ -65,9 +65,9 @@ classdef CSNaturalImageLuminance < edu.washington.riekelab.protocols.RiekeLabSta
             obj.currentStimSet = 'VanHaterenCSLuminances_20170127.mat';
             load([resourcesDir, obj.currentStimSet]);
             
-            obj.ScaledCenterIntensity = luminaceData(obj.imageIndex).CenterIntensity ./ luminaceData(obj.imageIndex).ImageMax;
-            obj.ScaledSurroundIntensity = luminaceData(obj.imageIndex).SurroundIntensity ./ luminaceData(obj.imageIndex).ImageMax;
-            obj.backgroundIntensity = luminaceData(obj.imageIndex).ImageMean / luminaceData(obj.imageIndex).ImageMax;
+            obj.ScaledCenterIntensity = luminanceData(obj.imageIndex).CenterIntensity ./ luminanceData(obj.imageIndex).ImageMax;
+            obj.ScaledSurroundIntensity = luminanceData(obj.imageIndex).SurroundIntensity ./ luminanceData(obj.imageIndex).ImageMax;
+            obj.backgroundIntensity = luminanceData(obj.imageIndex).ImageMean / luminanceData(obj.imageIndex).ImageMax;
         end
         
         function prepareEpoch(obj, epoch)

@@ -75,7 +75,7 @@ classdef CorrelatedCSNoise < edu.washington.riekelab.protocols.RiekeLabStageProt
                 obj.centerNoiseStream = RandStream('mt19937ar', 'Seed', obj.centerNoiseSeed);
                 obj.surroundNoiseStream = RandStream('mt19937ar', 'Seed', obj.surroundNoiseSeed);
                 %pre-generate correlated noise arrays
-                nFramesToPreGenerate = ceil(((obj.stimTime / 1e3) * obj.stageDevice.getMonitorRefreshRate()) / obj.frameDwell);
+                nFramesToPreGenerate = ceil(((obj.stimTime / 1e3) * obj.rig.getDevice('Stage').getMonitorRefreshRate()) / obj.frameDwell);
 
                 tempC = obj.centerNoiseStream.randn(1,nFramesToPreGenerate);
                 tempS = obj.surroundNoiseStream.randn(1,nFramesToPreGenerate);
