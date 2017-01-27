@@ -98,7 +98,7 @@ classdef CorrelatedCSNoise < edu.washington.riekelab.protocols.RiekeLabStageProt
             obj.surroundNoiseStream = RandStream('mt19937ar', 'Seed', obj.surroundNoiseSeed);
             
             %pre-generate correlated noise arrays
-            nFramesToPreGenerate = ceil(((obj.stimTime / 1e3) * obj.stageDevice.getMonitorRefreshRate()) / obj.frameDwell);
+            nFramesToPreGenerate = ceil(((obj.stimTime / 1e3) * obj.rig.getDevice('Stage').getMonitorRefreshRate()) / obj.frameDwell);
             
             tempC = randn(1,nFramesToPreGenerate);
             tempS = randn(1,nFramesToPreGenerate);
@@ -167,7 +167,7 @@ classdef CorrelatedCSNoise < edu.washington.riekelab.protocols.RiekeLabStageProt
                     intensity = obj.backgroundIntensity;
                 else %in stim frames
                     if mod(frame, obj.frameDwell) == 0 %noise update
-                        ind = frame/obj.frameDwell + 1;
+                        ind = min(frame/obj.frameDwell + 1, length(obj.centerNoiseArray));
                         intensity = obj.centerNoiseArray(ind);
                     end
                 end
@@ -180,7 +180,7 @@ classdef CorrelatedCSNoise < edu.washington.riekelab.protocols.RiekeLabStageProt
                     intensity = obj.backgroundIntensity;
                 else %in stim frames
                     if mod(frame, obj.frameDwell) == 0 %noise update
-                        ind = frame/obj.frameDwell + 1;
+                        ind = min(frame/obj.frameDwell + 1, length(obj.surroundNoiseArray));
                         intensity = obj.surroundNoiseArray(ind);
                     end
                 end
