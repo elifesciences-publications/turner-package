@@ -1,4 +1,4 @@
-classdef FlashedGratingModSurround < edu.washington.riekelab.turner.protocols.NaturalImageFlashProtocol
+classdef FlashedGratingModSurround < edu.washington.riekelab.protocols.RiekeLabStageProtocol
 
     properties
         preTime = 200 % ms
@@ -12,10 +12,14 @@ classdef FlashedGratingModSurround < edu.washington.riekelab.turner.protocols.Na
         gratingContrast = 0.5;
         backgroundIntensity = 0.5; %0-1
         
+        onlineAnalysis = 'none'
+        amp % Output amplifier
         numberOfAverages = uint16(90) % number of epochs to queue
     end
     
     properties (Hidden)
+        ampType
+        onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
         surroundIntensityValues
         surroundContrastSequence
         
@@ -32,8 +36,8 @@ classdef FlashedGratingModSurround < edu.washington.riekelab.turner.protocols.Na
         end
 
         function prepareRun(obj)
-            prepareRun@edu.washington.riekelab.turner.protocols.NaturalImageFlashProtocol(obj);
-            
+            prepareRun@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
+
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
@@ -41,55 +45,37 @@ classdef FlashedGratingModSurround < edu.washington.riekelab.turner.protocols.Na
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
             
-            obj.allEquivalentIntensityValues = ...
-                edu.washington.riekelab.turner.protocols.NaturalImageFlashProtocol.getEquivalentIntensityValues(...
-                obj, 0, obj.apertureDiameter, obj.rfSigmaCenter);
-            
-            if (obj.includeImageSurroundContrast)
-                noColumns = length(obj.surroundContrast) + 1;
-                obj.surroundIntensityValues = ...
-                    edu.washington.riekelab.turner.protocols.NaturalImageFlashProtocol.getEquivalentIntensityValues(...
-                    obj, obj.annulusInnerDiameter, obj.annulusOuterDiameter, obj.rfSigmaSurround);
-                obj.surroundContrastSequence = [];
-                for pp = 1:obj.noPatches
-                    newContrast = (obj.surroundIntensityValues(pp) - obj.backgroundIntensity) / obj.backgroundIntensity;
-                    newSeq = [obj.surroundContrast, newContrast];
-                    newSeq = randsample(newSeq,length(newSeq));
-                    obj.surroundContrastSequence = cat(2,obj.surroundContrastSequence,newSeq);
-                end
-                
-            else
-                noColumns = length(obj.surroundContrast);
-                obj.surroundContrastSequence = [];
-                for pp = 1:obj.noPatches
-                    newSeq = randsample(obj.surroundContrast,length(obj.surroundContrast));
-                    obj.surroundContrastSequence = cat(2,obj.surroundContrastSequence,newSeq);
-                end
-                
-            end
-            
-            if ~strcmp(obj.onlineAnalysis,'none')
-                responseDimensions = [2, noColumns, obj.noPatches]; %image/equiv by surround contrast by image patch
+            responseDimensions = [2, length(obj.surroundContrast), 1]; %image/equiv by surround contrast by grating (1)
                 obj.showFigure('edu.washington.riekelab.turner.figures.ModImageVsIntensityFigure',...
                 obj.rig.getDevice(obj.amp),responseDimensions,...
                 'recordingType',obj.onlineAnalysis,...
-                'preTime',obj.preTime,'stimTime',obj.stimTime);
-            end
+                'preTime',obj.preTime,'stimTime',obj.stimTime,...
+                'stimType','grating');
+
+            % Create surround contrast sequence.
+            obj.surroundContrastSequence = obj.surroundContrast;
         end
         
         function prepareEpoch(obj, epoch)
+            prepareEpoch@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj, epoch);
             device = obj.rig.getDevice(obj.amp);
             duration = (obj.preTime + obj.stimTime + obj.tailTime) / 1e3;
             epoch.addDirectCurrentStimulus(device, device.background, duration, obj.sampleRate);
             epoch.addResponse(device);
 
+            evenInd = mod(obj.numEpochsCompleted,2);
             if evenInd == 1 %even, show null
-                obj.stimulusTag = 'null';
+                obj.stimulusTag = 'intensity';
             elseif evenInd == 0 %odd, show grating
-                obj.stimulusTag = 'grating';
+                obj.stimulusTag = 'image';
             end
             
             %get current surround contrast
+            index = mod(obj.numEpochsCompleted, 2*length(obj.surroundContrastSequence)) + 1;
+            % Randomize the sequence order at the beginning of each sequence
+            if index == 1
+                obj.surroundContrastSequence = randsample(obj.surroundContrastSequence, length(obj.surroundContrastSequence));
+            end
             surroundContrastIndex = floor(mod(obj.numEpochsCompleted/2, length(obj.surroundContrastSequence)) + 1);
             obj.currentSurroundContrast = obj.surroundContrastSequence(surroundContrastIndex);
 
@@ -106,27 +92,22 @@ classdef FlashedGratingModSurround < edu.washington.riekelab.turner.protocols.Na
             annulusInnerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusInnerDiameter);
             annulusOuterDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusOuterDiameter);
 
-            if strcmp(obj.stimulusTag,'grating')
+            if strcmp(obj.stimulusTag,'image')
                 % Create grating stimulus.            
                 grate = stage.builtin.stimuli.Grating('square'); %square wave grating
-                grate.orientation = obj.rotation;
+                grate.orientation = 0;
                 grate.size = [apertureDiameterPix, apertureDiameterPix];
                 grate.position = canvasSize/2;
                 grate.spatialFreq = 1/(2*apertureDiameterPix);
                 grate.color = 2*obj.backgroundIntensity; %amplitude of square wave
                 grate.contrast = obj.gratingContrast; %multiplier on square wave
-                if (obj.splitField)
-                    grate.phase = 90;
-                else %full-field
-                    grate.phase = 0;
-                end
+                grate.phase = 90; %split field
                 p.addStimulus(grate); %add grating to the presentation
                 
                 %hide during pre & post
                 grateVisible = stage.builtin.controllers.PropertyController(grate, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(grateVisible);
-  
             end
             
             if (obj.apertureDiameter > 0) %% Create aperture
