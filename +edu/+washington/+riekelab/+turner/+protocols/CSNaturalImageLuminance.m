@@ -2,9 +2,9 @@ classdef CSNaturalImageLuminance < edu.washington.riekelab.protocols.RiekeLabSta
     
     properties
         preTime = 500 % ms
-        stimTime = 5000 % ms
+        stimTime = 8000 % ms
         tailTime = 500 % ms
-        fixationDuration = 100 % ms
+        fixationDuration = 200 % ms
         imageIndex = 1 % 1-20
         centerDiameter = 200 % um
         annulusInnerDiameter = 300 % um
