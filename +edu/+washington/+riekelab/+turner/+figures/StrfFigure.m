@@ -156,7 +156,7 @@ classdef StrfFigure < symphonyui.core.FigureHandler
                 title(obj.axesHandle,['Strf at ', num2str(filterTimes(snapShotInd)) ' msec']);
                 colormap(obj.axesHandle, gray)
             else
-                set(obj.imHandle, 'CData', obj.newFilter(:,:,2));
+                set(obj.imHandle, 'CData', obj.newFilter(:,:,snapShotInd));
             end
         end
         
