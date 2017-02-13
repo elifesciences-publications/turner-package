@@ -6,6 +6,7 @@ classdef ModImageVsIntensityFigure < symphonyui.core.FigureHandler
         recordingType
         preTime
         stimTime
+        stimType
     end
     
     properties (Access = private)
@@ -25,10 +26,12 @@ classdef ModImageVsIntensityFigure < symphonyui.core.FigureHandler
             ip.addParameter('recordingType', [], @(x)ischar(x));
             ip.addParameter('preTime', [], @(x)isvector(x));
             ip.addParameter('stimTime', [], @(x)isvector(x));
+            ip.addParameter('stimType', 'NaturalImage', @(x)ischar(x));
             ip.parse(varargin{:});
             obj.recordingType = ip.Results.recordingType;
             obj.preTime = ip.Results.preTime;
             obj.stimTime = ip.Results.stimTime;
+            obj.stimType = ip.Results.stimType;
             
             %response matrices are (2, image/equiv) x (surround contrast) x (image patch)
             obj.summaryData.responseMatrix = zeros(responseDimensions);
@@ -59,7 +62,11 @@ classdef ModImageVsIntensityFigure < symphonyui.core.FigureHandler
             sampleRate = response.sampleRate.quantityInBaseUnits;
             
             %get epoch info to know where to store response in summary data
-            imagePatchIndex = epoch.parameters('imagePatchIndex');
+            if strcmp(obj.stimType,'NaturalImage')
+                imagePatchIndex = epoch.parameters('imagePatchIndex');
+            elseif strcmp(obj.stimType,'grating')
+                imagePatchIndex = 1;
+            end
             stimulusTag = epoch.parameters('stimulusTag');
             currentSurroundContrast = epoch.parameters('currentSurroundContrast');
             surroundIndex = find(obj.summaryData.surroundContrast(1,:,imagePatchIndex) == currentSurroundContrast,1);
