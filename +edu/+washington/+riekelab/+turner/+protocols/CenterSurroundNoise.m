@@ -9,8 +9,9 @@ classdef CenterSurroundNoise < edu.washington.riekelab.protocols.RiekeLabStagePr
         annulusOuterDiameter = 600 % um
         noiseStdv = 0.3 %contrast, as fraction of mean
         backgroundIntensity = 0.5 % (0-1)
-        frameDwell = 1 % Frames per noise update
+        frameDwell = 2 % Frames per noise update
         useRandomSeed = true % false = repeated noise trajectory (seed 0)
+        onlyIndependentTrials = false; %false = also do C+S. True = just get c and s indep for filters
 
         onlineAnalysis = 'none'
         numberOfAverages = uint16(30) % number of epochs to queue
@@ -41,13 +42,22 @@ classdef CenterSurroundNoise < edu.washington.riekelab.protocols.RiekeLabStagePr
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
             if ~strcmp(obj.onlineAnalysis,'none')
+                if (obj.onlyIndependentTrials) %c, s
+                    updatePatternC = [1,2];
+                    updatePatternS = [2,2];
+                else %c, s, c+s
+                    updatePatternC = [1,3];
+                    updatePatternS = [2,3];
+                   
+                end
+                
                 obj.showFigure('edu.washington.riekelab.turner.figures.LinearFilterFigure',...
                     obj.rig.getDevice(obj.amp),obj.rig.getDevice('Frame Monitor'),...
                     obj.rig.getDevice('Stage'),...
                     'recordingType',obj.onlineAnalysis,...
                     'preTime',obj.preTime,'stimTime',obj.stimTime,...
                     'frameDwell',obj.frameDwell,'seedID','centerNoiseSeed',...
-                    'updatePattern',[1,3],'figureTitle','Center');
+                    'updatePattern',updatePatternC,'figureTitle','Center');
             
                 obj.showFigure('edu.washington.riekelab.turner.figures.LinearFilterFigure2',...
                     obj.rig.getDevice(obj.amp),obj.rig.getDevice('Frame Monitor'),...
@@ -55,7 +65,7 @@ classdef CenterSurroundNoise < edu.washington.riekelab.protocols.RiekeLabStagePr
                     'recordingType',obj.onlineAnalysis,...
                     'preTime',obj.preTime,'stimTime',obj.stimTime,...
                     'frameDwell',obj.frameDwell,'seedID','surroundNoiseSeed',...
-                    'updatePattern',[2,3],'figureTitle','Surround','noiseStdv',obj.noiseStdv);
+                    'updatePattern',updatePatternS,'figureTitle','Surround','noiseStdv',obj.noiseStdv);
             end
         end
         
@@ -67,8 +77,13 @@ classdef CenterSurroundNoise < edu.washington.riekelab.protocols.RiekeLabStagePr
             epoch.addResponse(device);
             
             %determine which stimulus to play this epoch
-            %cycles thru center,surround, center + surround
-            index = mod(obj.numEpochsCompleted,3);
+            if (obj.onlyIndependentTrials)
+                %cycles thru center, surround
+                index = mod(obj.numEpochsCompleted,2);
+            else %do c, s, and c+s
+                %cycles thru center, surround, center + surround
+                index = mod(obj.numEpochsCompleted,3);
+            end
             if index == 0
                 obj.currentStimulus = 'Center';
                 % Determine seed values.
