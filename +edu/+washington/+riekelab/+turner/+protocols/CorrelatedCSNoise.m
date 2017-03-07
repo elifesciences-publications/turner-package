@@ -10,8 +10,8 @@ classdef CorrelatedCSNoise < edu.washington.riekelab.protocols.RiekeLabStageProt
         noiseStdv = 0.3 %contrast, as fraction of mean
         csCorrelation = 0; %[-1 1]
         backgroundIntensity = 0.5 % (0-1)
-        frameDwell = 2 % Frames per noise update
-        useRandomSeed = false % false = repeated noise trajectory (seed 0)
+        frameDwell = 12 % Frames per noise update
+        centerSeed = 1 % center seed = x, surround seed = x + 1
 
         onlineAnalysis = 'none'
         numberOfAverages = uint16(15) % number of epochs to queue
@@ -65,13 +65,9 @@ classdef CorrelatedCSNoise < edu.washington.riekelab.protocols.RiekeLabStageProt
             if index == 0
                 obj.currentStimulus = 'Center';
                 % Determine seed values.
-                if obj.useRandomSeed
-                    obj.centerNoiseSeed = RandStream.shuffleSeed;
-                    obj.surroundNoiseSeed = RandStream.shuffleSeed;
-                else
-                    obj.centerNoiseSeed = 0;
-                    obj.surroundNoiseSeed = 1;
-                end
+                obj.centerNoiseSeed = obj.centerSeed;
+                obj.surroundNoiseSeed = obj.centerSeed + 1;
+                
                 obj.centerNoiseStream = RandStream('mt19937ar', 'Seed', obj.centerNoiseSeed);
                 obj.surroundNoiseStream = RandStream('mt19937ar', 'Seed', obj.surroundNoiseSeed);
                 %pre-generate correlated noise arrays
