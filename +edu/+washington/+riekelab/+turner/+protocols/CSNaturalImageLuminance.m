@@ -9,8 +9,10 @@ classdef CSNaturalImageLuminance < edu.washington.riekelab.protocols.RiekeLabSta
         centerDiameter = 200 % um
         annulusInnerDiameter = 300 % um
         annulusOuterDiameter = 600 % um
-        useRandomSeed = false % false = repeated trajectory (seed 0)
-        shuffleCenterSurround = false % false = maintain spatial correlations. True = mix c & s
+        
+        trajectorySeed = 1 % for center and surround
+        useRandomSeed = false % false = repeated trajectory
+        shuffleCenterSurround = false % false = maintain spatial correlations. True = mix s
 
         onlineAnalysis = 'none'
         numberOfAverages = uint16(15) % number of epochs to queue
@@ -82,24 +84,13 @@ classdef CSNaturalImageLuminance < edu.washington.riekelab.protocols.RiekeLabSta
             index = mod(obj.numEpochsCompleted,3);
             if index == 0
                 obj.currentStimulus = 'Center';
-                % Determine seed values.
+                % Determine seed values. Center and surround have same seed
                 if obj.useRandomSeed
-                    if obj.shuffleCenterSurround %different c & s seeds
-                        obj.centerSeed = RandStream.shuffleSeed;
-                        obj.surroundSeed = RandStream.shuffleSeed;
-                    else %same c & s seed
-                        obj.centerSeed = RandStream.shuffleSeed;
-                        obj.surroundSeed = obj.centerSeed;
-                    end
-                    
-                else
-                    if obj.shuffleCenterSurround %different c & s seeds
-                        obj.centerSeed = 0;
-                        obj.surroundSeed = 1;
-                    else %same c & s seed
-                        obj.centerSeed = 0;
-                        obj.surroundSeed = 0;
-                    end
+                    obj.centerSeed = RandStream.shuffleSeed;
+                    obj.surroundSeed = obj.centerSeed;
+                else %repeated-seed trials
+                    obj.centerSeed = obj.trajectorySeed;
+                    obj.surroundSeed = obj.trajectorySeed;
                 end
                 obj.centerStream = RandStream('mt19937ar', 'Seed', obj.centerSeed);
                 obj.surroundStream = RandStream('mt19937ar', 'Seed', obj.surroundSeed);
@@ -112,7 +103,13 @@ classdef CSNaturalImageLuminance < edu.washington.riekelab.protocols.RiekeLabSta
 
                 tempS = obj.surroundStream.randperm(length(obj.ScaledCenterIntensity));
                 obj.SurroundLocationIndex = tempS(1:noFixations);
-                obj.SurroundIntensity = obj.ScaledSurroundIntensity(obj.SurroundLocationIndex);  
+                if (obj.shuffleCenterSurround) %mix up surround intensities
+                    tempMixInds = obj.surroundStream.randperm(length(obj.SurroundLocationIndex));
+                    obj.SurroundLocationIndex = obj.SurroundLocationIndex(tempMixInds);
+                end
+                obj.SurroundIntensity = obj.ScaledSurroundIntensity(obj.SurroundLocationIndex);
+
+                
             elseif index == 1
                 obj.currentStimulus = 'Surround';
             elseif index == 2

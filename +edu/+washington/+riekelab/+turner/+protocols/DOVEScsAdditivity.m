@@ -162,8 +162,9 @@ classdef DOVEScsAdditivity < edu.washington.riekelab.protocols.RiekeLabStageProt
                 aperture = stage.builtin.stimuli.Rectangle();
                 aperture.position = canvasSize/2;
                 aperture.color = obj.backgroundIntensity;
-                aperture.size = [max(canvasSize) max(canvasSize)];
-                mask = stage.core.Mask.createCircularAperture(centerDiameterPix/max(canvasSize), 1024);
+                tempSz = 1.5*max(canvasSize);
+                aperture.size = [tempSz tempSz];
+                mask = stage.core.Mask.createCircularAperture(centerDiameterPix/tempSz, 1024);
                 aperture.setMask(mask);
                 p.addStimulus(aperture);
             elseif strcmp(obj.currentStimulus,'Surround') %aperture in far surround + mask in center
@@ -171,8 +172,9 @@ classdef DOVEScsAdditivity < edu.washington.riekelab.protocols.RiekeLabStageProt
                 aperture = stage.builtin.stimuli.Rectangle();
                 aperture.position = canvasSize/2;
                 aperture.color = obj.backgroundIntensity;
-                aperture.size = [max(canvasSize) max(canvasSize)];
-                mask = stage.core.Mask.createCircularAperture(annulusOuterDiameterPix/max(canvasSize), 1024);
+                tempSz = 1.5*max(canvasSize);
+                aperture.size = [tempSz tempSz];
+                mask = stage.core.Mask.createCircularAperture(annulusOuterDiameterPix/tempSz, 1024);
                 aperture.setMask(mask);
                 p.addStimulus(aperture);
                 % center mask:
@@ -187,8 +189,9 @@ classdef DOVEScsAdditivity < edu.washington.riekelab.protocols.RiekeLabStageProt
                 aperture = stage.builtin.stimuli.Rectangle();
                 aperture.position = canvasSize/2;
                 aperture.color = obj.backgroundIntensity;
-                aperture.size = [max(canvasSize) max(canvasSize)];
-                mask = stage.core.Mask.createCircularAperture(annulusOuterDiameterPix/max(canvasSize), 1024);
+                tempSz = 1.5*max(canvasSize);
+                aperture.size = [tempSz tempSz];
+                mask = stage.core.Mask.createCircularAperture(annulusOuterDiameterPix/tempSz, 1024);
                 aperture.setMask(mask);
                 p.addStimulus(aperture);
                 
