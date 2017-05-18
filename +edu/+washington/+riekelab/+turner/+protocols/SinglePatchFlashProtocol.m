@@ -61,6 +61,7 @@ classdef (Abstract) SinglePatchFlashProtocol < edu.washington.riekelab.protocols
     methods (Static)
         function patchLocations =  getPatchLocations(obj,noPatches,patchContrast,patchLinearity)
             % GET PATCH LOCATIONS:
+            resourcesDir = 'C:\Users\Public\Documents\turner-package\resources\';
             rng(obj.seed); %set random seed for fixation draw
             load([resourcesDir,obj.currentStimSet,'.mat']);
             fieldName = ['imk', obj.imageName];

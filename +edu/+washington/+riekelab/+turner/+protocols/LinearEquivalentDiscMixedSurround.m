@@ -9,7 +9,7 @@ classdef LinearEquivalentDiscMixedSurround < edu.washington.riekelab.turner.prot
         annulusInnerDiameter = 250; %  um
         annulusOuterDiameter = 600; % um
         
-        patchContrast = 'all' %of center
+        patchContrast = 'negative' %of center
         patchLinearity = 'biasedNonlinear' %of center
         linearIntegrationFunction = 'gaussian'
         rfSigmaCenter = 50 % (um) Enter from fit RF
@@ -68,7 +68,7 @@ classdef LinearEquivalentDiscMixedSurround < edu.washington.riekelab.turner.prot
             
             %Center image patch:
             obj.centerPatchMatrix = ...
-                edu.washington.riekelab.turner.protocols.NaturalImageFlashProtocol.getImagePatchMatrix(...
+                edu.washington.riekelab.turner.protocols.SinglePatchFlashProtocol.getImagePatchMatrix(...
                 obj, obj.centerPatchLocation);
             
             %shuffled surround image locations:
@@ -80,10 +80,11 @@ classdef LinearEquivalentDiscMixedSurround < edu.washington.riekelab.turner.prot
             obj.surroundPatchLocations = cat(2,obj.centerPatchLocation,obj.surroundPatchLocations);
 
             if ~strcmp(obj.onlineAnalysis,'none')
-                responseDimensions = [2, noColumns, obj.noPatches]; %image/equiv by surround contrast by image patch
+                responseDimensions = [2, length(obj.surroundPatchLocations) + 1, 1]; %image/equiv by surround contrast by image patch
                 obj.showFigure('edu.washington.riekelab.turner.figures.ModImageVsIntensityFigure',...
                 obj.rig.getDevice(obj.amp),responseDimensions,...
                 'recordingType',obj.onlineAnalysis,...
+                'stimType','SinglePatchMixedSurround',...
                 'preTime',obj.preTime,'stimTime',obj.stimTime);
             end
         end
@@ -104,14 +105,14 @@ classdef LinearEquivalentDiscMixedSurround < edu.washington.riekelab.turner.prot
 
             %get current surround location
             totalSurrounds = length(obj.surroundPatchLocations) + 1; %mixed surrounds plus real surround plus no surround
-            obj.surroundIndex = floor(mod(obj.numEpochsCompleted/2,totalSurrounds));
-            if (obj.surroundIndex == 0) %no surround
+            obj.surroundIndex = floor(mod(obj.numEpochsCompleted/2,totalSurrounds)) + 1;
+            if (obj.surroundIndex == 1) %no surround
                 obj.currentSurroundLocation = [0,0]; %placeholder
             else
-                obj.currentSurroundLocation = obj.surroundPatchLocations(obj.surroundIndex);
+                obj.currentSurroundLocation = obj.surroundPatchLocations(:,obj.surroundIndex-1);
                 %Surround image patch:
                 obj.surroundPatchMatrix = ...
-                    edu.washington.riekelab.turner.protocols.NaturalImageFlashProtocol.getImagePatchMatrix(...
+                    edu.washington.riekelab.turner.protocols.SinglePatchFlashProtocol.getImagePatchMatrix(...
                     obj, obj.currentSurroundLocation);
             end
 
@@ -124,7 +125,7 @@ classdef LinearEquivalentDiscMixedSurround < edu.washington.riekelab.turner.prot
             epoch.addParameter('imagePatchIndex', obj.surroundIndex); %for analysis fig mostly
         end
         
-        function p = createPresentation(obj)            
+        function p = createPresentation(obj)
             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3);
             p.setBackgroundColor(obj.backgroundIntensity);
@@ -132,57 +133,54 @@ classdef LinearEquivalentDiscMixedSurround < edu.washington.riekelab.turner.prot
             apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
             annulusInnerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusInnerDiameter);
             annulusOuterDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusOuterDiameter);
-            
+
             % Add surround image
-            if (obj.surroundIndex == 0) %no surround
+            if (obj.surroundIndex == 1) %no surround
                 
             else
-                scene = stage.builtin.stimuli.Image(obj.centerPatchMatrix);
+                scene = stage.builtin.stimuli.Image(obj.surroundPatchMatrix);
                 scene.size = canvasSize; %scale up to canvas size
                 scene.position = canvasSize/2;
                 % Use linear interpolation when scaling the image.
                 scene.setMinFunction(GL.LINEAR);
                 scene.setMagFunction(GL.LINEAR);
+
+                % Add mask to make image appear only in annulus
+                distanceMatrix = createDistanceMatrix(canvasSize(1),canvasSize(2));
+                annulus = uint8((distanceMatrix < annulusOuterDiameterPix/2 & ...
+                    distanceMatrix >= annulusInnerDiameterPix/2) * 255);
+                surroundMask = stage.core.Mask(annulus);
+                scene.setMask(surroundMask);
+                
                 p.addStimulus(scene);
                 sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(sceneVisible);
             end
-            % Add large aperture around surround
-            if (obj.annulusOuterDiameter > 0) 
-                aperture = stage.builtin.stimuli.Rectangle();
-                aperture.position = canvasSize/2;
-                aperture.color = obj.backgroundIntensity;
-                aperture.size = [max(canvasSize) max(canvasSize)];
-                mask = stage.core.Mask.createCircularAperture(annulusOuterDiameterPix/max(canvasSize), 1024); %circular aperture
-                aperture.setMask(mask);
-                p.addStimulus(aperture); %add aperture
-            end
-            % Add mask over center region of surround image
-            surroundMask = stage.builtin.stimuli.Rectangle();
-            surroundMask.size = canvasSize;
-            surroundMask.color = obj.backgroundIntensity;
-            surroundMask.position = canvasSize/2;
-            p.addStimulus(surroundMask);
-            sceneVisible = stage.builtin.controllers.PropertyController(surroundMask, 'visible', ...
-                @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
-            p.addController(sceneVisible);
-            
+
             %add center image
-            if strcmp(obj.stimulusTag,'image')
+            if strcmp(obj.stimulusTag,'image') %image in center
                 scene = stage.builtin.stimuli.Image(obj.centerPatchMatrix);
                 scene.size = canvasSize; %scale up to canvas size
                 scene.position = canvasSize/2;
                 % Use linear interpolation when scaling the image.
                 scene.setMinFunction(GL.LINEAR);
                 scene.setMagFunction(GL.LINEAR);
+                
+                % Add mask to make image appear only in center
+                distanceMatrix = createDistanceMatrix(canvasSize(1),canvasSize(2));
+                annulus = uint8((distanceMatrix < apertureDiameterPix/2) * 255);
+                centerMask = stage.core.Mask(annulus);
+                scene.setMask(centerMask);
+                
                 p.addStimulus(scene);
                 sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(sceneVisible);
-            elseif strcmp(obj.stimulusTag,'intensity')
-                disc = stage.builtin.stimuli.Rectangle();
-                disc.size = canvasSize;
+            elseif strcmp(obj.stimulusTag,'intensity') %uniform disc in center
+                disc = stage.builtin.stimuli.Ellipse();
+                disc.radiusX = apertureDiameterPix/2;
+                disc.radiusY = apertureDiameterPix/2;
                 disc.color = obj.equivalentIntensity;
                 disc.position = canvasSize/2;
                 p.addStimulus(disc);
@@ -190,41 +188,10 @@ classdef LinearEquivalentDiscMixedSurround < edu.washington.riekelab.turner.prot
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(sceneVisible);
             end
-            
-            if (obj.apertureDiameter > 0) %% Create aperture around center
-                aperture = stage.builtin.stimuli.Rectangle();
-                aperture.position = canvasSize/2;
-                aperture.color = obj.backgroundIntensity;
-                aperture.size = [max(canvasSize) max(canvasSize)];
-                mask = stage.core.Mask.createCircularAperture(apertureDiameterPix/max(canvasSize), 1024); %circular aperture
-                aperture.setMask(mask);
-                p.addStimulus(aperture); %add aperture
-            end
-            
 
-            
-            %make annulus in surround
-            rect = stage.builtin.stimuli.Rectangle();
-            rect.position = canvasSize/2;
-            rect.color = obj.backgroundIntensity + ...
-                obj.backgroundIntensity * obj.currentSurroundContrast;
-            rect.size = [max(canvasSize) max(canvasSize)];
-
-            distanceMatrix = createDistanceMatrix(1024);
-            annulus = uint8((distanceMatrix < annulusOuterDiameterPix/max(canvasSize) & ...
-                distanceMatrix > annulusInnerDiameterPix/max(canvasSize)) * 255);
-            mask = stage.core.Mask(annulus);
-
-            rect.setMask(mask);
-            p.addStimulus(rect);
-            rectVisible = stage.builtin.controllers.PropertyController(rect, 'visible', ...
-                @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
-            p.addController(rectVisible);
-            
-            function m = createDistanceMatrix(size)
-                step = 2 / (size - 1);
-                [xx, yy] = meshgrid(-1:step:1, -1:step:1);
-                m = sqrt(xx.^2 + yy.^2);
+            function m = createDistanceMatrix(sizeX,sizeY)
+                [xx, yy] = meshgrid(1:sizeX,1:sizeY);
+                m = sqrt((xx-(sizeX/2)).^2+(yy-(sizeY/2)).^2);
             end
         end
         

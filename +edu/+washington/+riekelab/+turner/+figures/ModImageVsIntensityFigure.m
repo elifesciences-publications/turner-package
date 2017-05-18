@@ -66,18 +66,29 @@ classdef ModImageVsIntensityFigure < symphonyui.core.FigureHandler
                 imagePatchIndex = epoch.parameters('imagePatchIndex');
             elseif strcmp(obj.stimType,'grating')
                 imagePatchIndex = 1;
+            elseif strcmp(obj.stimType,'SinglePatchMixedSurround')
+                imagePatchIndex = 1;
             end
             stimulusTag = epoch.parameters('stimulusTag');
-            currentSurroundContrast = epoch.parameters('currentSurroundContrast');
-            surroundIndex = find(obj.summaryData.surroundContrast(1,:,imagePatchIndex) == currentSurroundContrast,1);
-            if isempty(surroundIndex)
-                surroundIndex = find(isnan(obj.summaryData.surroundContrast(1,:,imagePatchIndex)),1);
-            end
+            
             if strcmp(stimulusTag,'image')
                 stimInd = 1;
             elseif strcmp(stimulusTag,'intensity') %update summary data
                 stimInd = 2;
             end
+            
+            if strcmp(obj.stimType,'SinglePatchMixedSurround')
+                surroundIndex = epoch.parameters('imagePatchIndex');
+            else
+                currentSurroundContrast = epoch.parameters('currentSurroundContrast');
+                surroundIndex = find(obj.summaryData.surroundContrast(1,:,imagePatchIndex) == currentSurroundContrast,1);
+                if isempty(surroundIndex)
+                    surroundIndex = find(isnan(obj.summaryData.surroundContrast(1,:,imagePatchIndex)),1);
+                end
+                obj.summaryData.surroundContrast(stimInd,surroundIndex,imagePatchIndex) = ...
+                currentSurroundContrast;
+            end
+
             
             %process data and pull out epoch response
             if strcmp(obj.recordingType,'extracellular') %spike recording
@@ -105,8 +116,7 @@ classdef ModImageVsIntensityFigure < symphonyui.core.FigureHandler
                 obj.summaryData.responseMatrix(stimInd,surroundIndex,imagePatchIndex) + newEpochResponse;
             obj.summaryData.countMatrix(stimInd,surroundIndex,imagePatchIndex) = ...
                 obj.summaryData.countMatrix(stimInd,surroundIndex,imagePatchIndex) + 1;
-            obj.summaryData.surroundContrast(stimInd,surroundIndex,imagePatchIndex) = ...
-                currentSurroundContrast;
+            
             
             %plot summary data...
             %data lines:
