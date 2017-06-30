@@ -63,8 +63,8 @@ classdef SharedTwoPhotonWithScanTrigger < symphonyui.core.descriptions.RigDescri
             daq.getStream('doport1').setBitPosition(trigger, 0);
             obj.addDevice(trigger);
             
-            scanTrigger = UnitConvertingDevice('Scan Trigger', Measurement.UNITLESS).bindStream(daq.getStream('doport2'));
-            daq.getStream('doport2').setBitPosition(scanTrigger, 0);
+            scanTrigger = UnitConvertingDevice('Scan Trigger', Measurement.UNITLESS).bindStream(daq.getStream('doport1'));
+            daq.getStream('doport1').setBitPosition(scanTrigger, 1);
             obj.addDevice(scanTrigger);
         end
         

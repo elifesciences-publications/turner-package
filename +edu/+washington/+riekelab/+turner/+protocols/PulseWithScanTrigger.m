@@ -4,9 +4,9 @@ classdef PulseWithScanTrigger < edu.washington.riekelab.protocols.RiekeLabProtoc
     
     properties
         amp                             % Output amplifier
-        preTime = 50                    % Pulse leading duration (ms)
+        preTime = 500                    % Pulse leading duration (ms)
         stimTime = 500                  % Pulse duration (ms)
-        tailTime = 50                   % Pulse trailing duration (ms)
+        tailTime = 500                   % Pulse trailing duration (ms)
         pulseAmplitude = 100            % Pulse amplitude (mV or pA depending on amp mode)
     end
     
@@ -93,7 +93,7 @@ classdef PulseWithScanTrigger < edu.washington.riekelab.protocols.RiekeLabProtoc
         end
         
         function stim = createScanTriggerStimulus(obj)
-            gen = symphonyui.builtin.stimuli.RepeatingPulseGenerator();
+            gen = symphonyui.builtin.stimuli.PulseGenerator();
             
             gen.preTime = 0;
             gen.stimTime = 1;
