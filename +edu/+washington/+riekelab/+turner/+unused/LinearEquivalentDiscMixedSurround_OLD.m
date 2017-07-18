@@ -1,4 +1,4 @@
-classdef LinearEquivalentDiscMixedSurround < edu.washington.riekelab.turner.protocols.NaturalImageFlashProtocol
+classdef LinearEquivalentDiscMixedSurround_OLD < edu.washington.riekelab.turner.protocols.SinglePatchFlashProtocol
 
     properties
         preTime = 200 % ms
@@ -6,31 +6,38 @@ classdef LinearEquivalentDiscMixedSurround < edu.washington.riekelab.turner.prot
         tailTime = 200 % ms
 
         apertureDiameter = 250 % um
+        annulusInnerDiameter = 250; %  um
+        annulusOuterDiameter = 600; % um
+        
+        patchContrast = 'negative' %of center
+        patchLinearity = 'biasedNonlinear' %of center
         linearIntegrationFunction = 'gaussian'
         rfSigmaCenter = 50 % (um) Enter from fit RF
         
-        annulusInnerDiameter = 250; %  um
-        annulusOuterDiameter = 600; % um
+        noMixedSurrounds = 8;
+        surroundContrast = 'all' %surround
 
-        numberOfAverages = uint16(360) % 6 * noPatches * noAvg
+        
+        numberOfAverages = uint16(180) % number of epochs to queue
     end
     
     properties (Hidden)
-        linearIntegrationFunctionType = symphonyui.core.PropertyType('char', 'row', {'gaussian','uniform'})       
+        linearIntegrationFunctionType = symphonyui.core.PropertyType('char', 'row', {'gaussian','uniform'})
         
-        allEquivalentIntensityValues
-        
-        mixedSurroundPatchLocations
-        mixedSurroundPatchMatrix
+        patchContrastType = symphonyui.core.PropertyType('char', 'row', {'all','negative','positive'})
+        surroundContrastType = symphonyui.core.PropertyType('char', 'row', {'all','negative','positive'})
+        patchLinearityType = symphonyui.core.PropertyType('char', 'row', {'biasedNonlinear','biasedLinear','random'})
+       
+        surroundPatchLocations
+        centerPatchMatrix
+        surroundPatchMatrix
         
         %saved out to each epoch...
-        imagePatchIndex
-        currentCenterLocation
+        centerPatchLocation
         equivalentIntensity
-        stimulusTag %image, equiv
-        surroundTag %none, nat, mix
-        currentMixedSurroundPatchLocation
-        
+        stimulusTag
+        currentSurroundLocation
+        surroundIndex
     end
 
     methods
@@ -41,7 +48,7 @@ classdef LinearEquivalentDiscMixedSurround < edu.washington.riekelab.turner.prot
         end
 
         function prepareRun(obj)
-            prepareRun@edu.washington.riekelab.turner.protocols.NaturalImageFlashProtocol(obj);
+            prepareRun@edu.washington.riekelab.turner.protocols.SinglePatchFlashProtocol(obj);
             
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
@@ -50,83 +57,72 @@ classdef LinearEquivalentDiscMixedSurround < edu.washington.riekelab.turner.prot
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
             
+            %Center image location:
+            obj.centerPatchLocation = ...
+                edu.washington.riekelab.turner.protocols.SinglePatchFlashProtocol.getPatchLocations(...
+                obj,1,obj.patchContrast,obj.patchLinearity);
+            %Center disc intensity:
+            obj.equivalentIntensity = ...
+                edu.washington.riekelab.turner.protocols.SinglePatchFlashProtocol.getEquivalentIntensityValue(...
+                obj, 0, obj.apertureDiameter, obj.rfSigmaCenter, obj.centerPatchLocation);
+            
+            %Center image patch:
+            obj.centerPatchMatrix = ...
+                edu.washington.riekelab.turner.protocols.SinglePatchFlashProtocol.getImagePatchMatrix(...
+                obj, obj.centerPatchLocation);
+            
+            %shuffled surround image locations:
+            obj.surroundPatchLocations = ...
+                edu.washington.riekelab.turner.protocols.SinglePatchFlashProtocol.getPatchLocations(...
+                obj,obj.noMixedSurrounds,obj.surroundContrast,'random');
+            
+            %first location is real "matched" surround:
+            obj.surroundPatchLocations = cat(2,obj.centerPatchLocation,obj.surroundPatchLocations);
+
             if ~strcmp(obj.onlineAnalysis,'none')
-                responseDimensions = [2, 3, obj.noPatches]; %image/equiv by surround condition by image patch
+                responseDimensions = [2, length(obj.surroundPatchLocations) + 1, 1]; %image/equiv by surround contrast by image patch
                 obj.showFigure('edu.washington.riekelab.turner.figures.ModImageVsIntensityFigure',...
                 obj.rig.getDevice(obj.amp),responseDimensions,...
                 'recordingType',obj.onlineAnalysis,...
-                'stimType','NaturalImageMixedSurround',...
+                'stimType','SinglePatchMixedSurround',...
                 'preTime',obj.preTime,'stimTime',obj.stimTime);
             end
-
-            %get center equivalent intensities:
-            obj.allEquivalentIntensityValues = ...
-                edu.washington.riekelab.turner.protocols.NaturalImageFlashProtocol.getEquivalentIntensityValues(...
-                obj, 0, obj.apertureDiameter, obj.rfSigmaCenter);
-            
-            %get mixed surround locations:
-            resourcesDir = 'C:\Users\Public\Documents\turner-package\resources\';
-            rng(obj.seed + 1); %set random seed different than center
-            load([resourcesDir,obj.currentStimSet,'.mat']);
-            fieldName = ['imk', obj.imageName];
-            xLoc = imageData.(fieldName).location(:,1);
-            yLoc = imageData.(fieldName).location(:,2);
-            pullInds = randsample(1:length(xLoc),obj.noPatches);
-            obj.mixedSurroundPatchLocations(1,1:obj.noPatches) = xLoc(pullInds); %in VH pixels
-            obj.mixedSurroundPatchLocations(2,1:obj.noPatches) = yLoc(pullInds);
         end
         
         function prepareEpoch(obj, epoch)
-            prepareEpoch@edu.washington.riekelab.turner.protocols.NaturalImageFlashProtocol(obj, epoch);
+            prepareEpoch@edu.washington.riekelab.turner.protocols.SinglePatchFlashProtocol(obj, epoch);
             device = obj.rig.getDevice(obj.amp);
             duration = (obj.preTime + obj.stimTime + obj.tailTime) / 1e3;
             epoch.addDirectCurrentStimulus(device, device.background, duration, obj.sampleRate);
             epoch.addResponse(device);
-            
-            %pull current image:
-            epochsPerImagePatch = 6; %image and equiv for each of 3 surround conditions
-            obj.imagePatchIndex = floor(mod(obj.numEpochsCompleted/epochsPerImagePatch,obj.noPatches) + 1);
-            
-            %center patch location:
-            obj.currentCenterLocation(1) = obj.patchLocations(1,obj.imagePatchIndex); %in VH pixels
-            obj.currentCenterLocation(2) = obj.patchLocations(2,obj.imagePatchIndex);
-            obj.equivalentIntensity = obj.allEquivalentIntensityValues(obj.imagePatchIndex);
-            %center patch matrix:
-            obj.imagePatchMatrix = ...
-                edu.washington.riekelab.turner.protocols.NaturalImageFlashProtocol.getImagePatchMatrix(...
-                obj, obj.currentCenterLocation);
-            
-            %mixed surround patch location:
-            obj.currentMixedSurroundPatchLocation(1) = obj.mixedSurroundPatchLocations(1,obj.imagePatchIndex); %in VH pixels
-            obj.currentMixedSurroundPatchLocation(2) = obj.mixedSurroundPatchLocations(2,obj.imagePatchIndex);
-            %mixed surround patch matrix:
-            obj.mixedSurroundPatchMatrix = ...
-                edu.washington.riekelab.turner.protocols.NaturalImageFlashProtocol.getImagePatchMatrix(...
-                obj, obj.currentMixedSurroundPatchLocation);
-            
-            %which center stim?
+
             evenInd = mod(obj.numEpochsCompleted,2);
             if evenInd == 1 %even, show uniform linear equivalent intensity
                 obj.stimulusTag = 'intensity';
             elseif evenInd == 0 %odd, show image
                 obj.stimulusTag = 'image';
             end
-            %which surround stim?
-            surInd = mod(floor(obj.numEpochsCompleted./2),3);
-            if surInd == 0 %no surround
-                obj.surroundTag = 'none';
-            elseif surInd == 1 %natural, matched surround
-                obj.surroundTag = 'nat';
-            elseif surInd == 2 %mixed surround
-                obj.surroundTag = 'mixed';
+
+            %get current surround location
+            totalSurrounds = length(obj.surroundPatchLocations) + 1; %mixed surrounds plus real surround plus no surround
+            obj.surroundIndex = floor(mod(obj.numEpochsCompleted/2,totalSurrounds)) + 1;
+            if (obj.surroundIndex == 1) %no surround
+                obj.currentSurroundLocation = [0,0]; %placeholder
+            else
+                obj.currentSurroundLocation = obj.surroundPatchLocations(:,obj.surroundIndex-1);
+                %Surround image patch:
+                obj.surroundPatchMatrix = ...
+                    edu.washington.riekelab.turner.protocols.SinglePatchFlashProtocol.getImagePatchMatrix(...
+                    obj, obj.currentSurroundLocation);
             end
 
-            epoch.addParameter('imagePatchIndex', obj.imagePatchIndex);
-            epoch.addParameter('currentCenterLocation', obj.currentCenterLocation);
+            epoch.addParameter('centerPatchLocation', obj.centerPatchLocation);
             epoch.addParameter('equivalentIntensity', obj.equivalentIntensity);
             epoch.addParameter('stimulusTag', obj.stimulusTag);
-            epoch.addParameter('surroundTag', obj.surroundTag);
-            epoch.addParameter('currentMixedSurroundPatchLocation', obj.currentMixedSurroundPatchLocation);
+            
+            epoch.addParameter('currentSurroundLocation', obj.currentSurroundLocation);
+            
+            epoch.addParameter('imagePatchIndex', obj.surroundIndex); %for analysis fig mostly
         end
         
         function p = createPresentation(obj)
@@ -138,15 +134,11 @@ classdef LinearEquivalentDiscMixedSurround < edu.washington.riekelab.turner.prot
             annulusInnerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusInnerDiameter);
             annulusOuterDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusOuterDiameter);
 
-            % Add surround
-            if strcmp(obj.surroundTag,'none')
-                %no surround
-            else %image in surround
-                if strcmp(obj.surroundTag,'nat')
-                    scene = stage.builtin.stimuli.Image(obj.imagePatchMatrix);
-                elseif strcmp(obj.surroundTag,'mixed')
-                    scene = stage.builtin.stimuli.Image(obj.mixedSurroundPatchMatrix);
-                end
+            % Add surround image
+            if (obj.surroundIndex == 1) %no surround
+                
+            else
+                scene = stage.builtin.stimuli.Image(obj.surroundPatchMatrix);
                 scene.size = canvasSize; %scale up to canvas size
                 scene.position = canvasSize/2;
                 % Use linear interpolation when scaling the image.
@@ -168,7 +160,7 @@ classdef LinearEquivalentDiscMixedSurround < edu.washington.riekelab.turner.prot
 
             %add center image
             if strcmp(obj.stimulusTag,'image') %image in center
-                scene = stage.builtin.stimuli.Image(obj.imagePatchMatrix);
+                scene = stage.builtin.stimuli.Image(obj.centerPatchMatrix);
                 scene.size = canvasSize; %scale up to canvas size
                 scene.position = canvasSize/2;
                 % Use linear interpolation when scaling the image.

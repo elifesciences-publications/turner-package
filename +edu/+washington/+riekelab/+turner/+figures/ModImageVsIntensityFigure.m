@@ -15,6 +15,7 @@ classdef ModImageVsIntensityFigure < symphonyui.core.FigureHandler
         unityHandle
         
         summaryData
+        colorMat
     end
     
     methods
@@ -37,6 +38,8 @@ classdef ModImageVsIntensityFigure < symphonyui.core.FigureHandler
             obj.summaryData.responseMatrix = zeros(responseDimensions);
             obj.summaryData.countMatrix = zeros(responseDimensions);
             obj.summaryData.surroundContrast = nan(responseDimensions);
+            
+            obj.colorMat = edu.washington.riekelab.turner.utils.pmkmp(responseDimensions(2),'CubicYF');
 
             obj.createUi();
         end
@@ -68,6 +71,8 @@ classdef ModImageVsIntensityFigure < symphonyui.core.FigureHandler
                 imagePatchIndex = 1;
             elseif strcmp(obj.stimType,'SinglePatchMixedSurround')
                 imagePatchIndex = 1;
+            elseif strcmp(obj.stimType,'NaturalImageMixedSurround')
+                imagePatchIndex = epoch.parameters('imagePatchIndex');
             end
             stimulusTag = epoch.parameters('stimulusTag');
             
@@ -79,6 +84,19 @@ classdef ModImageVsIntensityFigure < symphonyui.core.FigureHandler
             
             if strcmp(obj.stimType,'SinglePatchMixedSurround')
                 surroundIndex = epoch.parameters('imagePatchIndex');
+                plotColor = 'k';
+            elseif strcmp(obj.stimType,'NaturalImageMixedSurround')
+                tempTag = epoch.parameters('surroundTag');
+                if strcmp(tempTag,'none')
+                    surroundIndex = 1;
+                    plotColor = 'k';
+                elseif strcmp(tempTag,'nat')
+                    surroundIndex = 2;
+                    plotColor = 'g';
+                elseif strcmp(tempTag,'mixed')
+                    surroundIndex = 3;
+                    plotColor = 'r';
+                end
             else
                 currentSurroundContrast = epoch.parameters('currentSurroundContrast');
                 surroundIndex = find(obj.summaryData.surroundContrast(1,:,imagePatchIndex) == currentSurroundContrast,1);
@@ -87,9 +105,9 @@ classdef ModImageVsIntensityFigure < symphonyui.core.FigureHandler
                 end
                 obj.summaryData.surroundContrast(stimInd,surroundIndex,imagePatchIndex) = ...
                 currentSurroundContrast;
+                plotColor = obj.colorMat(surroundIndex,:);
             end
-
-            
+  
             %process data and pull out epoch response
             if strcmp(obj.recordingType,'extracellular') %spike recording
                 %take (prePts+1:prePts+stimPts)
@@ -122,16 +140,20 @@ classdef ModImageVsIntensityFigure < symphonyui.core.FigureHandler
             %data lines:
             meanMatrix = obj.summaryData.responseMatrix ./ obj.summaryData.countMatrix;
             if isempty(obj.lineHandle)
-                obj.lineHandle = line(squeeze(meanMatrix(1,:,:)),...
-                    squeeze(meanMatrix(2,:,:)),...
-                    'Parent', obj.axesHandle,'Marker','o','LineStyle','none');
+                obj.lineHandle = line(squeeze(meanMatrix(1,surroundIndex,:)),...
+                    squeeze(meanMatrix(2,surroundIndex,:)),...
+                    'Parent', obj.axesHandle,'Marker','o','LineStyle','none','Color',plotColor);
+            elseif surroundIndex > length(obj.lineHandle)
+                obj.lineHandle(surroundIndex) = line(squeeze(meanMatrix(1,surroundIndex,:)),...
+                    squeeze(meanMatrix(2,surroundIndex,:)),...
+                    'Parent', obj.axesHandle,'Marker','o','LineStyle','none','Color',plotColor);
             else
-                set(obj.lineHandle(imagePatchIndex), 'XData', squeeze(meanMatrix(1,:,imagePatchIndex)),...
-                    'YData', squeeze(meanMatrix(2,:,imagePatchIndex)));
+                set(obj.lineHandle(surroundIndex), 'XData', squeeze(meanMatrix(1,surroundIndex,:)),...
+                    'YData', squeeze(meanMatrix(2,surroundIndex,:)),'Color',plotColor);
             end
             %unity line:
-            limDown = min(obj.summaryData.responseMatrix(:));
-            limUp = max(obj.summaryData.responseMatrix(:));
+            limDown = min(meanMatrix(:));
+            limUp = max(meanMatrix(:));
             if isempty(obj.unityHandle)
                 obj.unityHandle = line([limDown limUp] , [limDown limUp],...
                     'Parent', obj.axesHandle,'Color','k','Marker','none','LineStyle','--');
