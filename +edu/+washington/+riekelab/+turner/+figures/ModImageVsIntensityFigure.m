@@ -73,6 +73,8 @@ classdef ModImageVsIntensityFigure < symphonyui.core.FigureHandler
                 imagePatchIndex = 1;
             elseif strcmp(obj.stimType,'NaturalImageMixedSurround')
                 imagePatchIndex = epoch.parameters('imagePatchIndex');
+            elseif strcmp(obj.stimType,'gratingCorrSurround')
+                imagePatchIndex = epoch.parameters('intensityIndex');
             end
             stimulusTag = epoch.parameters('stimulusTag');
             
@@ -97,7 +99,20 @@ classdef ModImageVsIntensityFigure < symphonyui.core.FigureHandler
                     surroundIndex = 3;
                     plotColor = 'r';
                 end
-            else
+            elseif strcmp(obj.stimType,'gratingCorrSurround')
+                tempTag = epoch.parameters('surroundTag');
+                if strcmp(tempTag,'none')
+                    surroundIndex = 1;
+                    plotColor = 'k';
+                elseif strcmp(tempTag,'corr')
+                    surroundIndex = 2;
+                    plotColor = 'g';
+                elseif strcmp(tempTag,'acorr')
+                    surroundIndex = 3;
+                    plotColor = 'r';
+                end
+            else %grating mod surround
+                
                 currentSurroundContrast = epoch.parameters('currentSurroundContrast');
                 surroundIndex = find(obj.summaryData.surroundContrast(1,:,imagePatchIndex) == currentSurroundContrast,1);
                 if isempty(surroundIndex)

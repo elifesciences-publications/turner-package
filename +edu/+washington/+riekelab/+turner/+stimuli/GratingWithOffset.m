@@ -7,7 +7,7 @@ classdef GratingWithOffset < stage.core.Stimulus
         orientation = 0         % Orientation (degrees)
         meanLuminance = 0.5     % Mean color as single intensity value (0 to 1)
         opacity = 1             % Opacity (0 to 1)
-        contrast = 1            % Scale factor for color values (-1 to 1, negative values invert the grating)
+        amplitude = 0.5         % Wave amplitude
         phase = 0               % Phase offset (degrees)
         spatialFreq = 1/100     % Spatial frequency (cycles/pixels)
     end
@@ -104,8 +104,8 @@ classdef GratingWithOffset < stage.core.Stimulus
             obj.needToUpdateVertexBuffer = true; %#ok<MCSUP>
         end
 
-        function set.contrast(obj, contrast)
-            obj.contrast = contrast;
+        function set.amplitude(obj, amplitude)
+            obj.amplitude = amplitude;
             obj.needToUpdateTexture = true; %#ok<MCSUP>
         end
 
@@ -164,8 +164,8 @@ classdef GratingWithOffset < stage.core.Stimulus
                     wave = linspace(-1, 1, obj.resolution);
             end
             
-            wave = wave .* obj.contrast; %scale by contrast
-            wave = (wave + 1).* obj.meanLuminance; %shift to mean
+            %scale and shift to mean, amplitude
+            wave = obj.meanLuminance + obj.amplitude .* wave;
             wave = wave * 255; %scale to [0, 255]
 
             image = ones(1, obj.resolution, 4, 'uint8') * 255;

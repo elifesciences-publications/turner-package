@@ -9,24 +9,23 @@ classdef FlashedGratingCorrelatedSurround < edu.washington.riekelab.protocols.Ri
         annulusInnerDiameter = 300; %  um
         annulusOuterDiameter = 600; % um
 
-        gratingContrast = 0.5;
-        gratingMean = 0.5;
+        gratingContrast = 0.5; %as a fraction of background intensity
+        gratingMean = [0.25 0.5 0.75];
         backgroundIntensity = 0.5; %0-1
         
         onlineAnalysis = 'none'
         amp % Output amplifier
-        numberOfAverages = uint16(90) % number of epochs to queue
+        numberOfAverages = uint16(90) % 6 x noMeans x noAvg
     end
     
     properties (Hidden)
         ampType
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
-        surroundIntensityValues
-        surroundContrastSequence
         
         %saved out to each epoch...
-        centerTag
+        stimulusTag
         surroundTag
+        currentIntensity
     end
 
     methods
@@ -42,12 +41,21 @@ classdef FlashedGratingCorrelatedSurround < edu.washington.riekelab.protocols.Ri
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
-                'groupBy',{'centerTag','surroundTag'});
+                'groupBy',{'stimulusTag','surroundTag'});
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
             
-            maxInt = obj.gratingMean + obj.gratingMean * obj.gratingContrast;
-            minInt = obj.gratingMean - obj.gratingMean * obj.gratingContrast;
+            if ~strcmp(obj.onlineAnalysis,'none')
+            responseDimensions = [2, 3, length(obj.gratingMean)]; %image/equiv by surround contrast by grating mean (1)
+            obj.showFigure('edu.washington.riekelab.turner.figures.ModImageVsIntensityFigure',...
+            obj.rig.getDevice(obj.amp),responseDimensions,...
+            'recordingType',obj.onlineAnalysis,...
+            'preTime',obj.preTime,'stimTime',obj.stimTime,...
+            'stimType','gratingCorrSurround');
+            end
+
+            maxInt = max(obj.gratingMean + obj.backgroundIntensity * obj.gratingContrast);
+            minInt = min(obj.gratingMean - obj.backgroundIntensity * obj.gratingContrast);
             if maxInt > 1
                error('Pixel value greater than 255'); 
             elseif minInt < 0
@@ -61,13 +69,12 @@ classdef FlashedGratingCorrelatedSurround < edu.washington.riekelab.protocols.Ri
             duration = (obj.preTime + obj.stimTime + obj.tailTime) / 1e3;
             epoch.addDirectCurrentStimulus(device, device.background, duration, obj.sampleRate);
             epoch.addResponse(device);
-
             
             centerInd = mod(obj.numEpochsCompleted,2);
             if centerInd == 1 %even, show null
-                obj.centerTag = 'intensity';
+                obj.stimulusTag = 'intensity';
             elseif centerInd == 0 %odd, show grating
-                obj.centerTag = 'image';
+                obj.stimulusTag = 'image';
             end
             
             surroundInd = floor(mod(obj.numEpochsCompleted/2, 3) + 1);
@@ -78,9 +85,14 @@ classdef FlashedGratingCorrelatedSurround < edu.washington.riekelab.protocols.Ri
             elseif surroundInd == 3
                 obj.surroundTag = 'acorr';
             end
+            
+            intensityIndex = floor(mod(obj.numEpochsCompleted/6, length(obj.gratingMean)) + 1);
+            obj.currentIntensity = obj.gratingMean(intensityIndex);
 
-            epoch.addParameter('centerTag', obj.centerTag);
+            epoch.addParameter('intensityIndex', intensityIndex);
+            epoch.addParameter('stimulusTag', obj.stimulusTag);
             epoch.addParameter('surroundTag', obj.surroundTag);
+            epoch.addParameter('currentIntensity', obj.currentIntensity);
         end
         
         function p = createPresentation(obj)            
@@ -92,15 +104,15 @@ classdef FlashedGratingCorrelatedSurround < edu.washington.riekelab.protocols.Ri
             annulusInnerDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusInnerDiameter);
             annulusOuterDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.annulusOuterDiameter);
 
-            if strcmp(obj.centerTag,'image')
+            if strcmp(obj.stimulusTag,'image')
                 % Create grating stimulus.            
                 grate = edu.washington.riekelab.turner.stimuli.GratingWithOffset('square'); %square wave grating
                 grate.orientation = 0;
                 grate.size = [apertureDiameterPix, apertureDiameterPix];
                 grate.position = canvasSize/2;
                 grate.spatialFreq = 1/(2*apertureDiameterPix);
-                grate.meanLuminance = obj.gratingMean;
-                grate.contrast = obj.gratingContrast; %multiplier on square wave
+                grate.meanLuminance = obj.currentIntensity;
+                grate.amplitude = obj.gratingContrast * obj.backgroundIntensity;
                 grate.phase = 90; %split field
                 p.addStimulus(grate); %add grating to the presentation
                 
@@ -109,10 +121,10 @@ classdef FlashedGratingCorrelatedSurround < edu.washington.riekelab.protocols.Ri
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(grateVisible);
                 
-            elseif strcmp(obj.centerTag,'intensity')
+            elseif strcmp(obj.stimulusTag,'intensity')
                 % Create spot stimulus.            
                 spot = stage.builtin.stimuli.Ellipse();
-                spot.color = obj.gratingMean;
+                spot.color = obj.currentIntensity;
                 spot.radiusX = apertureDiameterPix/2;
                 spot.radiusY = apertureDiameterPix/2;
                 spot.position = canvasSize/2;
@@ -143,11 +155,11 @@ classdef FlashedGratingCorrelatedSurround < edu.washington.riekelab.protocols.Ri
                 rect.position = canvasSize/2;
                 rect.size = [max(canvasSize) max(canvasSize)];
                 if strcmp(obj.surroundTag,'corr')
-                    rect.color = obj.gratingMean;
+                    rect.color = obj.currentIntensity;
                     
                 elseif strcmp(obj.surroundTag,'acorr')
                     rect.color = obj.backgroundIntensity - ...
-                        (obj.gratingMean - obj.backgroundIntensity);
+                        (obj.currentIntensity - obj.backgroundIntensity);
                 end
                 
                 distanceMatrix = createDistanceMatrix(1024);
