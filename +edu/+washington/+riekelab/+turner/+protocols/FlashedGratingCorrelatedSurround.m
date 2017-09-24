@@ -10,7 +10,7 @@ classdef FlashedGratingCorrelatedSurround < edu.washington.riekelab.protocols.Ri
         annulusOuterDiameter = 600; % um
 
         gratingContrast = 0.5; %as a fraction of background intensity
-        gratingMean = [0.25 0.5 0.75];
+        gratingMean = [0.3 0.4 0.5 0.6 0.7];
         backgroundIntensity = 0.5; %0-1
         
         onlineAnalysis = 'none'
