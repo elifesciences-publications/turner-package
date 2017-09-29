@@ -95,9 +95,9 @@ classdef PulseWithScanTrigger < edu.washington.riekelab.protocols.RiekeLabProtoc
         function stim = createScanTriggerStimulus(obj)
             gen = symphonyui.builtin.stimuli.PulseGenerator();
             
-            gen.preTime = 0;
-            gen.stimTime = 1;
-            gen.tailTime = obj.preTime + obj.stimTime + obj.tailTime - 1;
+            gen.preTime = 1;
+            gen.stimTime = obj.preTime + obj.stimTime + obj.tailTime - 2;
+            gen.tailTime = 1;
             gen.amplitude = 1;
             gen.mean = 0;
             gen.sampleRate = obj.sampleRate;
@@ -117,7 +117,7 @@ classdef PulseWithScanTrigger < edu.washington.riekelab.protocols.RiekeLabProtoc
             if ~isempty(triggers)            
                 epoch.addStimulus(triggers{1}, obj.createScanTriggerStimulus());
             end
-            
+
             if numel(obj.rig.getDeviceNames('Amp')) >= 2
                 epoch.addStimulus(obj.rig.getDevice(obj.amp2), obj.createAmp2Stimulus());
                 epoch.addResponse(obj.rig.getDevice(obj.amp2));
