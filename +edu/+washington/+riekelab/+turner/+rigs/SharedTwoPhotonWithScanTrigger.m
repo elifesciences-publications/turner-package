@@ -14,8 +14,6 @@ classdef SharedTwoPhotonWithScanTrigger < symphonyui.core.descriptions.RigDescri
             amp1 = MultiClampDevice('Amp1', 1).bindStream(daq.getStream('ao0')).bindStream(daq.getStream('ai0'));
             obj.addDevice(amp1);
             
-         
-            
             uvRamp = importdata(riekelab.Package.getCalibrationResource('rigs', 'shared_two_photon', 'uv_led_gamma_ramp.txt'));
             uv = CalibratedDevice('UV LED', Measurement.NORMALIZED, uvRamp(:, 1), uvRamp(:, 2)).bindStream(daq.getStream('ao2'));
             uv.addConfigurationSetting('ndfs', {}, ...
@@ -39,7 +37,9 @@ classdef SharedTwoPhotonWithScanTrigger < symphonyui.core.descriptions.RigDescri
             daq.getStream('doport1').setBitPosition(trigger, 0);
             obj.addDevice(trigger);
             
-            scanTrigger = UnitConvertingDevice('Scan Trigger', Measurement.UNITLESS).bindStream(daq.getStream('doport1'));
+            
+            scanTrigger = edu.washington.riekelab.turner.devices.ScanTriggerDevice();
+            scanTrigger.bindStream(daq.getStream('doport1'));
             daq.getStream('doport1').setBitPosition(scanTrigger, 1);
             obj.addDevice(scanTrigger);
         end

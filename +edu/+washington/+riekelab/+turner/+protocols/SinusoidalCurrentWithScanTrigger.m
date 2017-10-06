@@ -8,7 +8,7 @@ classdef SinusoidalCurrentWithScanTrigger < edu.washington.riekelab.protocols.Ri
         sineAmplitude = 20              % Sine amplitude (mV or pA)
         sineFrequency = 4               % Sine frequency (Hz)
         numberOfAverages = uint16(5)    % Number of epochs
-        interpulseInterval = 0          % Duration between ramps (s)
+        interpulseInterval = 1          % Duration between ramps (s)
     end
     
     properties (Hidden)
@@ -74,10 +74,16 @@ classdef SinusoidalCurrentWithScanTrigger < edu.washington.riekelab.protocols.Ri
             epoch.addStimulus(obj.rig.getDevice(obj.amp), obj.createAmpStimulus());
             epoch.addResponse(obj.rig.getDevice(obj.amp));
             
-            triggers = obj.rig.getDevices('Scan Trigger');
+            triggers = obj.rig.getDevices('scanTrigger');
             if ~isempty(triggers)            
                 epoch.addStimulus(triggers{1}, obj.createScanTriggerStimulus());
             end
+            scanNumber = triggers{1}.scanNumber;
+            epoch.addParameter('scanNumber', scanNumber);
+            disp(scanNumber)
+            
+            %advance the scan count:
+            triggers{1}.scanNumber = triggers{1}.scanNumber + 1;
         end
         
         function prepareInterval(obj, interval)
@@ -94,7 +100,7 @@ classdef SinusoidalCurrentWithScanTrigger < edu.washington.riekelab.protocols.Ri
         function tf = shouldContinueRun(obj)
             tf = obj.numEpochsCompleted < obj.numberOfAverages;
         end
-        
+
     end
     
 end
