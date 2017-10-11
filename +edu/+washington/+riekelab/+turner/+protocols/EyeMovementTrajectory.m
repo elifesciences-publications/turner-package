@@ -5,6 +5,7 @@ classdef EyeMovementTrajectory < edu.washington.riekelab.protocols.RiekeLabStage
         stimTime = 4000 % ms
         tailTime = 200 % ms
         imageName = '00152' %van hateren image names
+        patchMean = 'all'
         apertureDiameter = 0 % um
         randomSeed = 1 % for eye movement trajectory
         D = 5; % Drift diffusion coefficient, in microns
@@ -18,15 +19,16 @@ classdef EyeMovementTrajectory < edu.washington.riekelab.protocols.RiekeLabStage
         imageNameType = symphonyui.core.PropertyType('char', 'row', {'00152','00377','00405','00459','00657','01151','01154',...
             '01192','01769','01829','02265','02281','02733','02999','03093',...
             '03347','03447','03584','03758','03760'})
+        patchMeanType = symphonyui.core.PropertyType('char', 'row', {'all','negative','positive'})
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
         backgroundIntensity
         imageMatrix
         currentStimSet
+        currentImageSet
         xTraj
         yTraj
         timeTraj
         p0
-
     end
 
     methods
@@ -44,19 +46,40 @@ classdef EyeMovementTrajectory < edu.washington.riekelab.protocols.RiekeLabStage
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis);
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
+
+            % get current image and stim (library) set:
+            resourcesDir = 'C:\Users\Public\Documents\turner-package\resources\';
+            obj.currentImageSet = '/VHsubsample_20160105';
+            obj.currentStimSet = 'SaccadeLocationsLibrary_20171011';
+            load([resourcesDir,obj.currentStimSet,'.mat']);
+            fieldName = ['imk', obj.imageName];
             
             %load appropriate image...
-            resourcesDir = 'C:\Users\Public\Documents\turner-package\resources\';
             obj.currentStimSet = '/VHsubsample_20160105';
-            fileId=fopen([resourcesDir, obj.currentStimSet, '/imk', obj.imageName,'.iml'],'rb','ieee-be');
+            fileId=fopen([resourcesDir, obj.currentImageSet, '/imk', obj.imageName,'.iml'],'rb','ieee-be');
             img = fread(fileId, [1536,1024], 'uint16');
-           
-            img = double(img');
+            img = double(img);
             img = (img./max(img(:))); %rescale s.t. brightest point is maximum monitor level
-            obj.backgroundIntensity = mean(img(:));%set the mean to the mean over the image
             img = img.*255; %rescale s.t. brightest point is maximum monitor level
-            obj.imageMatrix = uint8(img);
+            obj.imageMatrix = uint8(img');
+
+            %1) restrict to desired patch mean luminance:
+            imageMean = imageData.(fieldName).imageMean;
+            obj.backgroundIntensity = imageMean;%set the mean to the mean over the image
+            locationMean = imageData.(fieldName).patchMean;
             
+            if strcmp(obj.patchMean,'all')
+                inds = 1:length(locationMean);
+            elseif strcmp(obj.patchMean,'positive')
+                inds = find((locationMean-imageMean) > 0);
+            elseif strcmp(obj.patchMean,'negative')
+                inds = find((locationMean-imageMean) <= 0);
+            end
+            rng(obj.randomSeed); %set random seed for fixation draw
+            drawInd = randsample(inds,1);
+            obj.p0(1) = imageData.(fieldName).location(drawInd,1);
+            obj.p0(2) = imageData.(fieldName).location(drawInd,2);
+
             %size of the stimulus on the prep:
             stimSize = obj.rig.getDevice('Stage').getCanvasSize() .* obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'); %um
             %scalingFactor: 3.3 for 1 arcmin/VH pixel (like DOVES), based
@@ -68,8 +91,8 @@ classdef EyeMovementTrajectory < edu.washington.riekelab.protocols.RiekeLabStage
             noFrames_perLoop = noFrames/2;
 
             %generate random walk out
-            tempX_1 = obj.D .* randn(1,noFrames_perLoop/2);
-            tempY_1 = obj.D .* randn(1,noFrames_perLoop/2);
+            tempX_1 = obj.D .* randn(1,round(noFrames_perLoop/2));
+            tempY_1 = obj.D .* randn(1,round(noFrames_perLoop/2));
             %hold off first step to subtract later
             tempX_1_a = tempX_1(2:end);
             tempY_1_b = tempY_1(2:end);
@@ -96,10 +119,6 @@ classdef EyeMovementTrajectory < edu.washington.riekelab.protocols.RiekeLabStage
             %canvasPix = (um) / (um/canvasPix)
             obj.xTraj = obj.xTraj ./obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel');
             obj.yTraj = obj.yTraj ./obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel');
-            
-            
-            %Draw saccade location
-            
         end
         
         function p = createPresentation(obj)
@@ -114,13 +133,21 @@ classdef EyeMovementTrajectory < edu.washington.riekelab.protocols.RiekeLabStage
             %scale up image for canvas. Now image pixels and canvas pixels
             %are the same size. Also image size is in rows (y), cols (x)
             %but stage sizes are in x, y
-            
             %canvasPix = (VHpix) * (um/VHpix)/(um/canvasPix)
             scene.size = [size(obj.imageMatrix,2) * (3.3)/obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'),...
                 size(obj.imageMatrix,1) * (3.3)/obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel')];
-            obj.p0 = canvasSize/2;  % make this saccade location
-            scene.position = obj.p0;
             
+            tempY = obj.p0(2); %swap row/column for y/x
+            tempX = obj.p0(1);
+            %translate about center, shift to (0,0)
+            obj.p0(1) = -(tempX - 1536/2);
+            obj.p0(2) = (tempY - 1024/2);
+            %scale to canvas pixels
+            obj.p0 = obj.p0 .* (3.3)/obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel');
+            %re-center on canvas center
+            obj.p0 = canvasSize/2 + obj.p0;
+            scene.position = obj.p0;
+
             % Use linear interpolation when scaling the image.
             scene.setMinFunction(GL.LINEAR);
             scene.setMagFunction(GL.LINEAR);
@@ -172,7 +199,8 @@ classdef EyeMovementTrajectory < edu.washington.riekelab.protocols.RiekeLabStage
             epoch.addParameter('backgroundIntensity', obj.backgroundIntensity);
             epoch.addParameter('randomSeed', obj.randomSeed);
             epoch.addParameter('currentStimSet',obj.currentStimSet);
-            
+            epoch.addParameter('currentImageSet',obj.currentImageSet);
+            epoch.addParameter('p0',obj.p0);
         end
         
 % %         %same presentation each epoch in a run. Replay.
