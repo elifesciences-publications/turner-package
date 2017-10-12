@@ -140,13 +140,14 @@ classdef EyeMovementTrajectory < edu.washington.riekelab.protocols.RiekeLabStage
             tempY = obj.p0(2); %swap row/column for y/x
             tempX = obj.p0(1);
             %translate about center, shift to (0,0)
-            obj.p0(1) = -(tempX - 1536/2);
-            obj.p0(2) = (tempY - 1024/2);
+            translatedX = -(tempX - 1536/2);
+            translatedY = (tempY - 1024/2);
+            translatedLocation = [translatedX, translatedY];
             %scale to canvas pixels
-            obj.p0 = obj.p0 .* (3.3)/obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel');
+            translatedLocation = translatedLocation .* (3.3)/obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel');
             %re-center on canvas center
-            obj.p0 = canvasSize/2 + obj.p0;
-            scene.position = obj.p0;
+            translatedLocation = canvasSize/2 + translatedLocation;
+            scene.position = translatedLocation;
 
             % Use linear interpolation when scaling the image.
             scene.setMinFunction(GL.LINEAR);
@@ -154,7 +155,7 @@ classdef EyeMovementTrajectory < edu.washington.riekelab.protocols.RiekeLabStage
             
             %apply eye trajectories to move image around
             scenePosition = stage.builtin.controllers.PropertyController(scene,...
-                'position', @(state)getScenePosition(obj, state.time - obj.preTime/1e3, obj.p0));
+                'position', @(state)getScenePosition(obj, state.time - obj.preTime/1e3, translatedLocation));
             
             function p = getScenePosition(obj, time, p0)
                 if time < 0
@@ -181,8 +182,8 @@ classdef EyeMovementTrajectory < edu.washington.riekelab.protocols.RiekeLabStage
                 aperture = stage.builtin.stimuli.Rectangle();
                 aperture.position = canvasSize/2;
                 aperture.color = obj.backgroundIntensity;
-                aperture.size = [max(canvasSize) max(canvasSize)];
-                mask = stage.core.Mask.createCircularAperture(apertureDiameterPix/max(canvasSize), 1024); %circular aperture
+                aperture.size = 2.*[max(canvasSize) max(canvasSize)];
+                mask = stage.core.Mask.createCircularAperture(apertureDiameterPix/(2*max(canvasSize)), 1024); %circular aperture
                 aperture.setMask(mask);
                 p.addStimulus(aperture); %add aperture
             end
