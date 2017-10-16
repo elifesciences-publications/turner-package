@@ -1,4 +1,4 @@
-classdef SinusoidalCurrentWithScanTrigger < edu.washington.riekelab.protocols.LaserScanProtocol
+classdef SinusoidalCurrentWithScanTrigger < edu.washington.riekelab.turner.protocols.LaserScanProtocol
     
     properties
         amp                             % Output amplifier
@@ -55,7 +55,7 @@ classdef SinusoidalCurrentWithScanTrigger < edu.washington.riekelab.protocols.La
         end
         
         function prepareEpoch(obj, epoch)
-            prepareEpoch@edu.washington.riekelab.protocols.LaserScanProtocol(obj, epoch);
+            prepareEpoch@edu.washington.riekelab.turner.protocols.LaserScanProtocol(obj, epoch);
             
             epoch.addStimulus(obj.rig.getDevice(obj.amp), obj.createAmpStimulus());
             epoch.addResponse(obj.rig.getDevice(obj.amp));
