@@ -1,4 +1,4 @@
-classdef PulseWithScanTrigger < edu.washington.riekelab.protocols.RiekeLabProtocol
+classdef PulseWithScanTrigger < edu.washington.riekelab.turner.protocols.LaserScanProtocol
     % Presents a set of rectangular pulse stimuli to a specified amplifier and records from the same amplifier.
     % Added an output TTL pulse to trigger laser scanning
     
@@ -12,7 +12,7 @@ classdef PulseWithScanTrigger < edu.washington.riekelab.protocols.RiekeLabProtoc
     
     properties
         numberOfAverages = uint16(5)    % Number of epochs
-        interpulseInterval = 1          % Duration between pulses (s)
+        interpulseInterval = 5          % Duration between pulses (s)
     end
     
     properties (Hidden)
@@ -56,37 +56,12 @@ classdef PulseWithScanTrigger < edu.washington.riekelab.protocols.RiekeLabProtoc
             
             stim = gen.generate();
         end
-        
-        function stim = createScanTriggerStimulus(obj)
-            gen = symphonyui.builtin.stimuli.PulseGenerator();
-            
-            gen.preTime = 1;
-            gen.stimTime = obj.preTime + obj.stimTime + obj.tailTime - 2;
-            gen.tailTime = 1;
-            gen.amplitude = 1;
-            gen.mean = 0;
-            gen.sampleRate = obj.sampleRate;
-            gen.units = symphonyui.core.Measurement.UNITLESS;
-            
-            stim = gen.generate();
-        end
-        
+
         function prepareEpoch(obj, epoch)
-            prepareEpoch@edu.washington.riekelab.protocols.RiekeLabProtocol(obj, epoch);
+            prepareEpoch@edu.washington.riekelab.turner.protocols.LaserScanProtocol(obj, epoch);
             
             epoch.addStimulus(obj.rig.getDevice(obj.amp), obj.createAmpStimulus());
             epoch.addResponse(obj.rig.getDevice(obj.amp));
-
-            triggers = obj.rig.getDevices('scanTrigger');
-            if ~isempty(triggers)
-                epoch.addStimulus(triggers{1}, obj.createScanTriggerStimulus());
-            end
-            scanNumber = triggers{1}.scanNumber;
-            epoch.addParameter('scanNumber', scanNumber);
-            disp(scanNumber)
-            
-            %advance the scan count:
-            triggers{1}.scanNumber = triggers{1}.scanNumber + 1;
         end
         
         function prepareInterval(obj, interval)

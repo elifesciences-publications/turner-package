@@ -1,14 +1,16 @@
-classdef SinusoidalCurrentWithScanTrigger < edu.washington.riekelab.protocols.LaserScanProtocol
+classdef PicospritzerWithScanTrigger < edu.washington.riekelab.turner.protocols.LaserScanProtocol
     
     properties
         amp                             % Output amplifier
-        preTime = 100                    % Sine leading duration (ms)
-        stimTime = 3000                  % Sine duration (ms)
-        tailTime = 100                   % Sine trailing duration (ms)
-        sineAmplitude = 20              % Sine amplitude (mV or pA)
-        sineFrequency = 4               % Sine frequency (Hz)
+        preTime = 500                    % Pulse leading duration (ms)
+        stimTime = 500                  % Pulse duration (ms)
+        tailTime = 500                   % Pulse trailing duration (ms)
+        sendPicoTrigger = true
+    end
+    
+    properties
         numberOfAverages = uint16(5)    % Number of epochs
-        interpulseInterval = 1          % Duration between ramps (s)
+        interpulseInterval = 5          % Duration between pulses (s)
     end
     
     properties (Hidden)
@@ -39,25 +41,29 @@ classdef SinusoidalCurrentWithScanTrigger < edu.washington.riekelab.protocols.La
                 'measurementRegion', [obj.preTime obj.preTime+obj.stimTime]);
         end
         
-        function stim = createAmpStimulus(obj)
-            gen = symphonyui.builtin.stimuli.SineGenerator();
+        function stim = createPicoStimulus(obj)
+            gen = symphonyui.builtin.stimuli.PulseGenerator();
             
             gen.preTime = obj.preTime;
             gen.stimTime = obj.stimTime;
             gen.tailTime = obj.tailTime;
-            gen.amplitude = obj.sineAmplitude;
-            gen.period = (1 / obj.sineFrequency) * 1e3; %in msec
-            gen.mean = obj.rig.getDevice(obj.amp).background.quantity;
+            gen.amplitude = 1;
+            gen.mean = 0;
             gen.sampleRate = obj.sampleRate;
-            gen.units = obj.rig.getDevice(obj.amp).background.displayUnits;
+            gen.units = symphonyui.core.Measurement.UNITLESS;
             
-            stim = gen.generate();
+            stim = gen.generate(); 
         end
-        
+
         function prepareEpoch(obj, epoch)
-            prepareEpoch@edu.washington.riekelab.protocols.LaserScanProtocol(obj, epoch);
+            prepareEpoch@edu.washington.riekelab.turner.protocols.LaserScanProtocol(obj, epoch);
             
-            epoch.addStimulus(obj.rig.getDevice(obj.amp), obj.createAmpStimulus());
+            picos = obj.rig.getDevices('Picospritzer');
+            if ~isempty(picos)
+                if (obj.sendPicoTrigger)
+                    epoch.addStimulus(picos{1}, obj.createPicoStimulus());
+                end
+            end
             epoch.addResponse(obj.rig.getDevice(obj.amp));
         end
         
