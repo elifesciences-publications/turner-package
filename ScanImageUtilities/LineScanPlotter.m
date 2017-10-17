@@ -86,8 +86,10 @@ function pushbutton1_Callback(hObject, eventdata, handles)
 axes(handles.axes1);
 cla;
 
+dataDir = '~/Dropbox/CurrentData/CalciumImaging/';
+% dataDir = 'C:\Users\scientifica\Documents\ScanImageData\';
+
 popup_selection = handles.popupmenu1.String(handles.popupmenu1.Value);
-dataDir = 'C:\Users\scientifica\Documents\ScanImageData\';
 cd([dataDir,popup_selection{1}]);
 
 %load file to plot
@@ -108,7 +110,7 @@ for tt = 1:length(trialsToPull)
     if tt == 1
         metaFileName= fileName;
     end
-    [~, pmtData, ~, roiGroup] = scanimage.util.readLineScanDataFiles(fileName,metaFileName);
+    [~, pmtData, ~, roiGroup] = readLineScanDataFiles_riekeLab(fileName,metaFileName);
     noROIs = size(roiGroup.rois,2);
     plotLen = size(pmtData,1) / noROIs;
     
@@ -188,7 +190,8 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
      set(hObject,'BackgroundColor','white');
 end
 %populate popup menu 1 with data directory names
-dataDir = 'C:\Users\scientifica\Documents\ScanImageData\';
+dataDir = '~/Dropbox/CurrentData/CalciumImaging/';
+% dataDir = 'C:\Users\scientifica\Documents\ScanImageData\';
 cd(dataDir);
 
 tempDir = dir; 
