@@ -1,8 +1,8 @@
-classdef SharedTwoPhotonWithScanTrigger < symphonyui.core.descriptions.RigDescription
+classdef SharedTwoPhotonWithScanPico < symphonyui.core.descriptions.RigDescription
     
     methods
         
-        function obj = SharedTwoPhotonWithScanTrigger()
+        function obj = SharedTwoPhotonWithScanPico()
             import symphonyui.builtin.daqs.*;
             import symphonyui.builtin.devices.*;
             import symphonyui.core.*;
@@ -39,6 +39,11 @@ classdef SharedTwoPhotonWithScanTrigger < symphonyui.core.descriptions.RigDescri
             scanTrigger.bindStream(daq.getStream('doport1'));
             daq.getStream('doport1').setBitPosition(scanTrigger, 1);
             obj.addDevice(scanTrigger);
+            
+            picosprizter = UnitConvertingDevice('Picospritzer', Measurement.UNITLESS).bindStream(daq.getStream('doport1'));
+            daq.getStream('doport1').setBitPosition(picosprizter, 2);
+            obj.addDevice(picosprizter);
+            
         end
         
     end
