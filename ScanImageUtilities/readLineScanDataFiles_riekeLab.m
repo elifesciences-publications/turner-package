@@ -16,10 +16,26 @@ function [header, pmtData, scannerPosData, roiGroup] = readLineScanDataFiles_rie
         headerStr = fread(fid,'*char')';
         fclose(fid);
     catch %metadata only produced for first file in a loop
+        tempInd = strfind(fileName,'_');
+        cellID = fileName(1:tempInd-1);
+        targetFileNumber = str2num(fileName(end-4:end));
         
-        
-        
-        
+        availableMetaFiles = dir([cellID,'*.meta.txt']);
+        metaFileInd = 0;
+        for aa = 1:length(availableMetaFiles)
+            newName = availableMetaFiles(aa).name;
+            tempInd = strfind(newName,'_');
+            fileNumber = str2num(newName(tempInd+1:tempInd+5));
+            if fileNumber > targetFileNumber
+                continue
+            else %use most recent meta file
+                metaFileInd = aa;
+            end
+        end
+        fid = fopen(availableMetaFiles(metaFileInd).name,'rt');
+        assert(fid > 0, 'Failed to open metadata file.');
+        headerStr = fread(fid,'*char')';
+        fclose(fid);
     end
     
     % parse metadata
