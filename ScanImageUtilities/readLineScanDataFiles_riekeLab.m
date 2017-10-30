@@ -32,8 +32,12 @@ function [header, pmtData, scannerPosData, roiGroup] = readLineScanDataFiles_rie
                 metaFileInd = aa;
             end
         end
+        try
         fileStr = [availableMetaFiles(metaFileInd).folder,'/' ...
             availableMetaFiles(metaFileInd).name];
+        catch
+        fileStr = availableMetaFiles(metaFileInd).name; 
+        end
         fid = fopen(fileStr,'rt');
         assert(fid > 0, 'Failed to open metadata file.');
         headerStr = fread(fid,'*char')';
