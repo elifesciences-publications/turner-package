@@ -29,6 +29,8 @@ classdef EyeMovementTrajectory < edu.washington.riekelab.protocols.RiekeLabStage
         yTraj
         timeTraj
         p0
+        xTraj_save
+        yTraj_save
     end
 
     methods
@@ -106,6 +108,9 @@ classdef EyeMovementTrajectory < edu.washington.riekelab.protocols.RiekeLabStage
             
             obj.xTraj = [obj.xTraj, obj.xTraj]; %do the loop twice
             obj.yTraj = [obj.yTraj, obj.yTraj]; %do the loop twice
+            
+            obj.xTraj_save = obj.xTraj; %still in VH coordinates
+            obj.yTraj_save = obj.yTraj;
             
             obj.timeTraj = (0:(length(obj.xTraj)-1)) ./...
                 obj.rig.getDevice('Stage').getMonitorRefreshRate(); %sec
@@ -201,7 +206,8 @@ classdef EyeMovementTrajectory < edu.washington.riekelab.protocols.RiekeLabStage
             epoch.addParameter('randomSeed', obj.randomSeed);
             epoch.addParameter('currentStimSet',obj.currentStimSet);
             epoch.addParameter('currentImageSet',obj.currentImageSet);
-            epoch.addParameter('p0',obj.p0);
+            epoch.addParameter('xTraj',obj.xTraj_save);
+            epoch.addParameter('yTraj',obj.yTraj_save);
         end
         
 % %         %same presentation each epoch in a run. Replay.
