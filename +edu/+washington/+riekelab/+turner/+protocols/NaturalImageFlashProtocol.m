@@ -73,7 +73,7 @@ classdef (Abstract) NaturalImageFlashProtocol < edu.washington.riekelab.protocol
             yLoc = imageData.(fieldName).location(inds,2);
             subunitResp = imageData.(fieldName).SubunitModelResponse(inds);
             LnResp = imageData.(fieldName).LnModelResponse(inds);
-            patchVariance = imageData.(fieldName).patchVariance;
+            patchVariance = imageData.(fieldName).PatchVariance;
             
             %2) do patch sampling:
             responseDifferences = subunitResp - LnResp;

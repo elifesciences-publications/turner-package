@@ -28,15 +28,9 @@ classdef NaturalImageFlash < edu.washington.riekelab.turner.protocols.NaturalIma
             
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
-                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
-                'groupBy',{'stimulusTag'});
+                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis);
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
-            if ~strcmp(obj.onlineAnalysis,'none')
-                obj.showFigure('edu.washington.riekelab.turner.figures.ImageVsIntensityFigure',...
-                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
-                'preTime',obj.preTime,'stimTime',obj.stimTime);
-            end
         end
         
         function prepareEpoch(obj, epoch)
