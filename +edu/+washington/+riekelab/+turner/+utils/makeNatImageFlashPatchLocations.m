@@ -1,7 +1,7 @@
 %% Pull van Hateren natural images...
 clear all; close all; clc;
 % IMAGES_DIR = 'C:\Users\Public\Documents\turner-package\resources\VHsubsample_20160105\'; % RIG PC
-IMAGES_DIR            = '~/Documents/MATLAB/Analysis/NatImages/Stimuli/VHsubsample_20160105/'; %MAC
+IMAGES_DIR            = '~/Dropbox/RiekeLab/Analysis/MATLAB/turner-package/resources/VHsubsample_20160105/'; %MAC
 temp_names                  = GetFilenames(IMAGES_DIR,'.iml');	
 for file_num = 1:size(temp_names,1)
     temp                    = temp_names(file_num,:);
@@ -77,7 +77,7 @@ for ImageIndex = 1:length(img_filenames_list)
     % scale image to [0 1] -- contrast, relative to mean over entire image...
     my_image_nomean = (my_image - mean(my_image(:))) ./ mean(my_image(:));
 
-    clear RFCenterProj RFSubCenterProj Location
+    clear RFCenterProj RFSubCenterProj Location PatchVariance PatchMean
 
     %set random seed
     randSeed = 1;
@@ -92,6 +92,8 @@ for ImageIndex = 1:length(img_filenames_list)
 
         % get patch
         ImagePatch = my_image_nomean(x-FilterSize/2+1:x+FilterSize/2,y-FilterSize/2+1:y+FilterSize/2);
+        PatchVariance(patch) = var(ImagePatch(:));
+        PatchMean(patch) = mean(ImagePatch(:)); %background-subtracted, mind you
 
         % convolve patch with subunit filter
         ImagePatch = conv2(ImagePatch, SubunitFilter, 'same');  
@@ -113,6 +115,8 @@ for ImageIndex = 1:length(img_filenames_list)
         end
     end
     imageData.(ImageID).location = Location;
+    imageData.(ImageID).PatchVariance = PatchVariance;
+    imageData.(ImageID).PatchMean = PatchMean;
     imageData.(ImageID).LnModelResponse = RFCenterProj;
     imageData.(ImageID).SubunitModelResponse = RFSubCenterProj;
     % calculate differences
@@ -131,7 +135,7 @@ modelParameters.FilterSize = FilterSize;
 modelParameters.SubunitRadius = SubunitRadius;
 modelParameters.CenterRadius = CenterRadius;
 
-save('NaturalImageFlashLibrary_110316.mat','imageData','modelParameters');
+save('NaturalImageFlashLibrary_120117.mat','imageData','modelParameters');
 
 %% Code like the following in protocols to do biased sampling:
 noBins = 50; %from no. image patches to show

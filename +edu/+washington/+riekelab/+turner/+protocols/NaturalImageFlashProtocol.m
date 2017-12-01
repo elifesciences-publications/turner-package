@@ -17,7 +17,7 @@ classdef (Abstract) NaturalImageFlashProtocol < edu.washington.riekelab.protocol
             '01192','01769','01829','02265','02281','02733','02999','03093',...
             '03347','03447','03584','03758','03760'})
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
-        patchSamplingType = symphonyui.core.PropertyType('char', 'row', {'random','ranked'})
+        patchSamplingType = symphonyui.core.PropertyType('char', 'row', {'random','ranked','biasedSpatialContrast'})
         patchContrastType = symphonyui.core.PropertyType('char', 'row', {'all','negative','positive'})
         
         screenSize
@@ -42,7 +42,7 @@ classdef (Abstract) NaturalImageFlashProtocol < edu.washington.riekelab.protocol
             obj.currentImageSet = '/VHsubsample_20160105';
             obj.screenSize = obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel') .* ...
                 obj.rig.getDevice('Stage').getCanvasSize(); %microns
-            obj.currentStimSet = 'NaturalImageFlashLibrary_110316'; %OLED on rigs F,E,B
+            obj.currentStimSet = 'NaturalImageFlashLibrary_120117'; %OLED on rigs F,E,B
 
             
             % get the image and scale it:
@@ -73,6 +73,7 @@ classdef (Abstract) NaturalImageFlashProtocol < edu.washington.riekelab.protocol
             yLoc = imageData.(fieldName).location(inds,2);
             subunitResp = imageData.(fieldName).SubunitModelResponse(inds);
             LnResp = imageData.(fieldName).LnModelResponse(inds);
+            patchVariance = imageData.(fieldName).patchVariance;
             
             %2) do patch sampling:
             responseDifferences = subunitResp - LnResp;
@@ -82,6 +83,14 @@ classdef (Abstract) NaturalImageFlashProtocol < edu.washington.riekelab.protocol
             elseif strcmp(obj.patchSampling,'ranked')
                 %pull more than needed to account for empty bins at tail
                 [~, ~, bin] = histcounts(responseDifferences,2*obj.noPatches);
+                populatedBins = unique(bin);
+                %pluck one patch from each bin
+                pullInds = arrayfun(@(b) find(b == bin,1),populatedBins);
+                %get patch indices:
+                pullInds = randsample(pullInds,obj.noPatches);
+            elseif strcmp(obj.patchSampling,'biasedSpatialContrast')
+                %pull more than needed to account for empty bins at tail
+                [~, ~, bin] = histcounts(patchVariance,2*obj.noPatches);
                 populatedBins = unique(bin);
                 %pluck one patch from each bin
                 pullInds = arrayfun(@(b) find(b == bin,1),populatedBins);
