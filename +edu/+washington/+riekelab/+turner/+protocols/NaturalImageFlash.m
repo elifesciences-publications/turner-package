@@ -15,6 +15,10 @@ classdef NaturalImageFlash < edu.washington.riekelab.turner.protocols.NaturalIma
         imagePatchIndex
         currentPatchLocation
     end
+    
+    properties (Dependent, SetAccess = private)
+        amp2                            % Secondary amplifier
+    end
 
     methods
         
@@ -25,8 +29,13 @@ classdef NaturalImageFlash < edu.washington.riekelab.turner.protocols.NaturalIma
 
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.turner.protocols.NaturalImageFlashProtocol(obj);
+
+            if numel(obj.rig.getDeviceNames('Amp')) < 2
+                obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
+            else
+                obj.showFigure('edu.washington.riekelab.figures.DualResponseFigure', obj.rig.getDevice(obj.amp), obj.rig.getDevice(obj.amp2));
+            end
             
-            obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis);
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
@@ -39,6 +48,10 @@ classdef NaturalImageFlash < edu.washington.riekelab.turner.protocols.NaturalIma
             duration = (obj.preTime + obj.stimTime + obj.tailTime) / 1e3;
             epoch.addDirectCurrentStimulus(device, device.background, duration, obj.sampleRate);
             epoch.addResponse(device);
+
+            if numel(obj.rig.getDeviceNames('Amp')) >= 2
+                epoch.addResponse(obj.rig.getDevice(obj.amp2));
+            end
 
             %pull patch location:
             obj.imagePatchIndex = mod(obj.numEpochsCompleted,obj.noPatches) + 1;
@@ -89,6 +102,16 @@ classdef NaturalImageFlash < edu.washington.riekelab.turner.protocols.NaturalIma
         
         function tf = shouldContinueRun(obj)
             tf = obj.numEpochsCompleted < obj.numberOfAverages;
+        end
+        
+        function a = get.amp2(obj)
+            amps = obj.rig.getDeviceNames('Amp');
+            if numel(amps) < 2
+                a = '(None)';
+            else
+                i = find(~ismember(amps, obj.amp), 1);
+                a = amps{i};
+            end
         end
 
     end
