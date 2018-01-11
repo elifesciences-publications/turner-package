@@ -1,13 +1,12 @@
 classdef ContinuousCurrentInjectionProtocol < edu.washington.riekelab.protocols.RiekeLabProtocol
-    % Presents a set of infinitely repeating rectangular pulse stimuli to a specified amplifier. This protocol records
-    % and displays no responses. Instead it assumes you have an oscilloscope attached to your rig with which you can
-    % view the amplifier response.
-    
+
     properties
         amp                             % Output amplifier
+        stimTime = 1000;                % (msec)
         waveFrequency = 10              % (Hz)
         waveMean = 0                   % Pulse mean / background (mV or pA depending on amp mode)
-        waveAmplitude = 5              % Pulse amplitude (mV or pA depending on amp mode)
+        waveAmplitude = 100              % Pulse amplitude (mV or pA depending on amp mode)
+        numberOfAverages = uint16(5)    % Number of epochs
     end
 
     properties (Dependent, SetAccess = private)
@@ -16,7 +15,6 @@ classdef ContinuousCurrentInjectionProtocol < edu.washington.riekelab.protocols.
     
     properties (Hidden)
         ampType
-        modeType = symphonyui.core.PropertyType('char', 'row', {'seal', 'leak'})
         modeFigure
     end
     
@@ -39,40 +37,21 @@ classdef ContinuousCurrentInjectionProtocol < edu.washington.riekelab.protocols.
         function p = getPreview(obj, panel)
             p = symphonyui.builtin.previews.StimuliPreview(panel, @()createPreviewStimuli(obj));
             function s = createPreviewStimuli(obj)
-                gen = symphonyui.builtin.stimuli.PulseGenerator(obj.createAmpStimulus().parameters);
+                gen = symphonyui.builtin.stimuli.SquareGenerator(obj.createAmpStimulus().parameters);
                 s = gen.generate();
             end
         end
         
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.protocols.RiekeLabProtocol(obj);
-            
-            if isempty(obj.modeFigure) || ~isvalid(obj.modeFigure)
-                obj.modeFigure = obj.showFigure('symphonyui.builtin.figures.CustomFigure', @null);
-                f = obj.modeFigure.getFigureHandle();
-                set(f, 'Name', 'Mode');
-                layout = uix.VBox('Parent', f);
-                uix.Empty('Parent', layout);
-                obj.modeFigure.userData.text = uicontrol( ...
-                    'Parent', layout, ...
-                    'Style', 'text', ...
-                    'FontSize', 24, ...
-                    'HorizontalAlignment', 'center', ...
-                    'String', '');
-                uix.Empty('Parent', layout);
-                set(layout, 'Height', [-1 42 -1]);
-            end
-            
-            if isvalid(obj.modeFigure)
-                set(obj.modeFigure.userData.text, 'String', [obj.mode ' running...']);
-            end
+            obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
         end
         
         function stim = createAmpStimulus(obj)
             gen = symphonyui.builtin.stimuli.SquareGenerator();
             
             gen.period = (1/obj.waveFrequency) * 1e3; %msec
-            gen.stimTime = 1.5*gen.period; %1.5 periods
+            gen.stimTime = obj.stimTime;
             gen.preTime = 0;
             gen.tailTime = 0;
             
@@ -98,19 +77,16 @@ classdef ContinuousCurrentInjectionProtocol < edu.washington.riekelab.protocols.
             epoch.addStimulus(obj.rig.getDevice(obj.amp), obj.createAmpStimulus());
 
             device = obj.rig.getDevice(obj.amp);
-            device.background = symphonyui.core.Measurement(obj.ampHoldSignal, device.background.displayUnits);
+            device.background = symphonyui.core.Measurement(obj.waveMean, device.background.displayUnits);
+            epoch.addResponse(obj.rig.getDevice(obj.amp));
         end
         
         function tf = shouldContinuePreparingEpochs(obj)
-            tf = obj.numEpochsPrepared < 1;
+            tf = obj.numEpochsPrepared < obj.numberOfAverages;
         end
         
         function tf = shouldContinueRun(obj)
-            tf = obj.numEpochsCompleted < 1;
-        end
-        
-        function completeRun(obj)
-            completeRun@edu.washington.riekelab.protocols.RiekeLabProtocol(obj);
+            tf = obj.numEpochsCompleted < obj.numberOfAverages;
         end
         
         function a = get.amp2(obj)
